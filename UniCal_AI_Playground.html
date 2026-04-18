@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniCal AI — 独角兽智能日历</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Nunito',sans-serif;background:#f0eef8;color:#2d2456;font-size:14px}
+
+:root{
+  --purple:#7c6fcd;
+  --purple-light:#ede9fb;
+  --purple-deep:#4a3fa3;
+  --purple-mid:#9d93d8;
+  --pink:#e784b0;
+  --pink-light:#fce9f3;
+  --teal:#4bbfa8;
+  --teal-light:#e0f7f3;
+  --amber:#f0a653;
+  --amber-light:#fef3e2;
+  --blue:#5ba4e5;
+  --blue-light:#e6f1fb;
+  --red:#e85d5d;
+  --red-light:#fceaea;
+  --green:#6dba7a;
+  --green-light:#eaf6ec;
+  --bg:#f0eef8;
+  --surface:#fff;
+  --border:#e8e3f5;
+  --border2:#d8d0f0;
+  --text:#2d2456;
+  --muted:#8b82b8;
+  --muted2:#b0a8d8;
+  --streak:#ff5f5f;
+  --shadow:0 2px 12px rgba(124,111,205,0.12);
+  --shadow-lg:0 8px 32px rgba(124,111,205,0.18);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:var(--purple-mid)}
+
+/* ── APP SHELL ── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;padding:0 24px;height:58px;
+  background:#fff;border-bottom:1px solid var(--border);
+  flex-shrink:0;gap:16px;position:relative;z-index:10;
+  box-shadow:0 1px 0 var(--border),0 2px 8px rgba(124,111,205,0.06)
+}
+.logo{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:900;color:var(--purple-deep);min-width:130px;letter-spacing:-0.3px}
+.logo-icon{
+  width:34px;height:34px;
+  background:linear-gradient(135deg,#c4b8f0 0%,#7c6fcd 100%);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;box-shadow:0 2px 8px rgba(124,111,205,0.3)
+}
+.top-nav{display:flex;gap:2px;flex:1}
+.top-pill{
+  padding:7px 18px;border-radius:22px;border:none;
+  background:transparent;font-size:13px;font-weight:700;color:var(--muted);
+  cursor:pointer;transition:all .18s;font-family:'Nunito',sans-serif
+}
+.top-pill:hover{background:var(--purple-light);color:var(--purple)}
+.top-pill.active{background:var(--purple);color:#fff;box-shadow:0 2px 8px rgba(124,111,205,0.35)}
+.top-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.streak-badge{
+  display:flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#ffe8e8,#fff0f0);
+  color:var(--streak);border-radius:20px;padding:6px 14px;
+  font-size:13px;font-weight:800;border:1px solid #ffc9c9
+}
+.streak-flame{font-size:14px;animation:flicker 1.4s ease-in-out infinite alternate}
+@keyframes flicker{0%{transform:scale(1) rotate(-3deg)}100%{transform:scale(1.15) rotate(3deg)}}
+.avatar{
+  width:34px;height:34px;background:linear-gradient(135deg,var(--purple),var(--purple-deep));
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;font-weight:800;cursor:pointer;
+  box-shadow:0 2px 6px rgba(124,111,205,0.35)
+}
+
+/* ── MAIN LAYOUT ── */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:54px;background:#fff;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:16px 0;gap:6px;flex-shrink:0
+}
+.sb-btn{
+  width:38px;height:38px;border-radius:11px;border:none;background:transparent;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:18px;transition:all .18s;color:var(--muted)
+}
+.sb-btn:hover{background:var(--purple-light)}
+.sb-btn.active{background:var(--purple-light);box-shadow:inset 0 0 0 1.5px var(--purple)}
+.sb-spacer{flex:1}
+
+/* ── CONTENT AREA ── */
+.content{flex:1;display:flex;overflow:hidden;position:relative}
+.view{flex:1;display:none;overflow:hidden}
+.view.active{display:flex}
+
+/* ══════════════════════════════════
+   MONTH VIEW
+══════════════════════════════════ */
+.month-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.cal-header{
+  display:flex;align-items:center;padding:14px 20px;gap:12px;
+  border-bottom:1px solid var(--border);background:#fff;flex-shrink:0
+}
+.cal-title{font-size:22px;font-weight:900;color:var(--purple-deep);letter-spacing:-0.5px}
+.nav-group{display:flex;gap:4px}
+.nav-btn{
+  width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);
+  background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:13px;font-weight:700;transition:all .18s
+}
+.nav-btn:hover{background:var(--purple-light);border-color:var(--purple);color:var(--purple)}
+.view-switch{display:flex;gap:2px;background:var(--bg);border-radius:10px;padding:3px;margin-left:auto}
+.vs-btn{
+  padding:5px 16px;border-radius:8px;border:none;background:transparent;
+  font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;
+  transition:all .18s;font-family:'Nunito',sans-serif
+}
+.vs-btn:hover{color:var(--purple)}
+.vs-btn.active{background:#fff;color:var(--purple);box-shadow:0 1px 6px rgba(124,111,205,0.18)}
+
+/* month grid */
+.month-grid-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.month-dow-row{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  border-bottom:1px solid var(--border);background:#fff;flex-shrink:0
+}
+.dow-cell{padding:9px 12px;text-align:center;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px}
+.month-grid{flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(5,1fr);overflow:hidden}
+.mday{
+  border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:8px;cursor:pointer;transition:background .12s;position:relative;
+  display:flex;flex-direction:column;gap:3px;background:#fff;min-height:0
+}
+.mday:nth-child(7n){border-right:none}
+.mday:hover{background:#faf8ff}
+.mday.other-month .mday-num{color:var(--muted2)}
+.mday.other-month{background:#faf9fd}
+.mday-num{
+  font-size:13px;font-weight:800;color:var(--text);
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;flex-shrink:0
+}
+.mday.today .mday-num{background:var(--purple);color:#fff;box-shadow:0 2px 6px rgba(124,111,205,0.4)}
+.event-chip{
+  padding:3px 7px;border-radius:6px;font-size:10px;font-weight:800;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+  transition:opacity .15s
+}
+.event-chip:hover{opacity:0.8}
+.chip-purple{background:#ede9fb;color:#5347a8}
+.chip-teal{background:#e0f7f3;color:#0a5e49}
+.chip-pink{background:#fce9f3;color:#993356}
+.chip-amber{background:#fef3e2;color:#7a4508}
+.chip-blue{background:#e6f1fb;color:#175fa5}
+.more-chip{font-size:10px;font-weight:700;color:var(--muted);padding:2px 6px;cursor:pointer}
+.more-chip:hover{color:var(--purple)}
+
+/* ══════════════════════════════════
+   WEEK VIEW
+══════════════════════════════════ */
+.week-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.week-progress-bar-section{
+  padding:12px 20px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0
+}
+.progress-section-title{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:9px}
+.task-progress-rows{display:flex;flex-direction:column;gap:7px}
+.tp-row{display:flex;align-items:center;gap:10px}
+.tp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.tp-name{font-size:12px;font-weight:700;color:var(--text);min-width:100px;flex-shrink:0}
+.tp-bar{flex:1;height:7px;background:var(--bg);border-radius:20px;overflow:hidden;border:1px solid var(--border)}
+.tp-fill{height:100%;border-radius:20px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.tp-pct{font-size:11px;font-weight:800;color:var(--muted);min-width:38px;text-align:right}
+/* week grid */
+.week-days-hdr{
+  display:grid;grid-template-columns:56px repeat(7,1fr);
+  border-bottom:1px solid var(--border);background:#fff;flex-shrink:0
+}
+.wdh-cell{padding:10px 6px;text-align:center;border-left:1px solid var(--border)}
+.wdh-cell:first-child{border-left:none;display:flex;align-items:center;justify-content:center}
+.wdh-dow{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.wdh-num{font-size:18px;font-weight:900;color:var(--text);margin-top:1px;line-height:1}
+.wdh-today{width:32px;height:32px;background:var(--purple);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;margin:2px auto 0;box-shadow:0 2px 6px rgba(124,111,205,0.4)}
+.week-body-scroll{flex:1;overflow-y:auto;display:flex}
+.wtime-col{width:56px;background:#fff;border-right:1px solid var(--border);flex-shrink:0}
+.wtime-slot{height:56px;display:flex;align-items:flex-start;justify-content:flex-end;padding:5px 8px 0;border-bottom:1px solid var(--border)}
+.wtime-lbl{font-size:10px;color:var(--muted);font-weight:700}
+.week-grid-cols{flex:1;display:grid;grid-template-columns:repeat(7,1fr)}
+.wcol{border-left:1px solid var(--border);position:relative}
+.wcol.today-col{background:linear-gradient(180deg,#faf8ff 0%,#fff 100%)}
+.wslot{height:56px;border-bottom:1px solid var(--border)}
+.wevent{
+  position:absolute;left:3px;right:3px;border-radius:8px;padding:4px 8px;
+  font-size:10px;font-weight:800;cursor:pointer;overflow:hidden;z-index:2;
+  transition:transform .15s,box-shadow .15s;border-left:3px solid transparent
+}
+.wevent:hover{transform:translateX(1px) scale(1.02);box-shadow:var(--shadow)}
+.we-purple{background:#ede9fb;color:#5347a8;border-left-color:#7c6fcd}
+.we-teal{background:#e0f7f3;color:#0a5e49;border-left-color:#4bbfa8}
+.we-pink{background:#fce9f3;color:#993356;border-left-color:#e784b0}
+.we-amber{background:#fef3e2;color:#7a4508;border-left-color:#f0a653}
+.we-blue{background:#e6f1fb;color:#175fa5;border-left-color:#5ba4e5}
+
+/* ══════════════════════════════════
+   DAY VIEW
+══════════════════════════════════ */
+.day-view{flex:1;display:flex;overflow:hidden}
+.day-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.day-hdr{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  background:#fff;display:flex;align-items:center;gap:12px;flex-shrink:0
+}
+.day-title{font-size:20px;font-weight:900;color:var(--purple-deep);letter-spacing:-0.4px}
+.day-sub{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+.today-chip{background:var(--purple);color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:12px}
+.day-timeline-wrap{flex:1;overflow-y:auto;display:flex}
+.dtime-col{width:64px;background:#fff;border-right:1px solid var(--border);flex-shrink:0}
+.dtime-slot{height:72px;display:flex;align-items:flex-start;justify-content:flex-end;padding:6px 10px 0;border-bottom:1px solid var(--border)}
+.devents-col{flex:1;background:#fff;position:relative}
+.dslot{height:72px;border-bottom:1px solid var(--border);padding:4px 6px;position:relative}
+.devent{
+  border-radius:12px;padding:10px 14px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;border-left:3px solid transparent;
+  display:flex;align-items:center;gap:10px
+}
+.devent:hover{transform:translateX(2px);box-shadow:var(--shadow)}
+.devent-icon{font-size:18px;flex-shrink:0}
+.devent-info{flex:1;min-width:0}
+.devent-title{font-size:13px;font-weight:800;color:inherit}
+.devent-time{font-size:11px;font-weight:600;opacity:0.75;margin-top:1px}
+.devent-mini-bar{width:60px;display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.dmb-pct{font-size:11px;font-weight:800}
+.dmb-bar{width:100%;height:5px;background:rgba(0,0,0,0.08);border-radius:10px;overflow:hidden}
+.dmb-fill{height:100%;border-radius:10px}
+/* day sidebar */
+.day-sidebar{
+  width:250px;border-left:1px solid var(--border);background:#fff;
+  overflow-y:auto;padding:16px;flex-shrink:0;display:flex;flex-direction:column;gap:14px
+}
+.ds-stat-card{border-radius:14px;padding:14px;border:1px solid transparent}
+.ds-stat-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px}
+.ds-stat-big{font-size:28px;font-weight:900;letter-spacing:-1px}
+.ds-stat-sub{font-size:12px;font-weight:700;margin-top:1px}
+.ds-stat-bar{margin-top:10px;height:7px;border-radius:20px;overflow:hidden}
+.ds-stat-bar-fill{height:100%;border-radius:20px;transition:width .8s ease}
+.ds-sec-title{font-size:12px;font-weight:800;color:var(--text)}
+.ds-task-item{
+  background:var(--bg);border-radius:12px;padding:12px;
+  border:1.5px solid var(--border);transition:border-color .15s
+}
+.ds-task-item:hover{border-color:var(--border2)}
+.dsti-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dsti-cb{
+  width:19px;height:19px;border-radius:6px;border:2px solid var(--border2);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .18s;font-size:11px;color:transparent;font-weight:800
+}
+.dsti-cb.done{background:var(--green);border-color:var(--green);color:#fff}
+.dsti-cb:hover:not(.done){border-color:var(--purple);background:var(--purple-light)}
+.dsti-name{font-size:13px;font-weight:800;color:var(--text)}
+.dsti-meta{font-size:11px;color:var(--muted);font-weight:600}
+.dsti-prog{height:5px;background:var(--border);border-radius:10px;overflow:hidden;margin-top:4px}
+.dsti-prog-fill{height:100%;border-radius:10px;transition:width .6s ease}
+
+/* ══════════════════════════════════
+   TROPHY VIEW
+══════════════════════════════════ */
+.trophy-view{flex:1;overflow-y:auto;padding:24px;background:var(--bg)}
+.trophy-hero{
+  border-radius:22px;padding:28px 32px;color:#fff;margin-bottom:22px;
+  display:flex;align-items:center;gap:28px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#6b5fcf 0%,#a08be0 40%,#d97fba 80%,#e784b0 100%)
+}
+.trophy-hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;
+  background:rgba(255,255,255,0.1);border-radius:50%
+}
+.trophy-hero::after{
+  content:'';position:absolute;bottom:-60px;right:60px;width:150px;height:150px;
+  background:rgba(255,255,255,0.07);border-radius:50%
+}
+.hero-uni{font-size:70px;position:relative;z-index:1;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.2));animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero-info{flex:1;position:relative;z-index:1}
+.hero-info h2{font-size:24px;font-weight:900;margin-bottom:6px;letter-spacing:-0.5px}
+.hero-info p{font-size:14px;opacity:0.9;font-weight:600}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.hs-card{background:rgba(255,255,255,0.18);border-radius:12px;padding:12px 14px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.2)}
+.hs-num{font-size:24px;font-weight:900;letter-spacing:-0.5px}
+.hs-lbl{font-size:11px;opacity:0.85;font-weight:700;margin-top:1px}
+.trophy-section-header{font-size:14px;font-weight:900;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px;letter-spacing:-0.2px}
+/* streak board */
+.streak-board{background:#fff;border-radius:18px;padding:20px;border:1.5px solid var(--border);margin-bottom:22px;box-shadow:var(--shadow)}
+.streak-grid{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.streak-row{display:flex;gap:7px;align-items:center}
+.streak-day-lbl{font-size:10px;font-weight:700;color:var(--muted);width:24px;flex-shrink:0}
+.sd{
+  width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:800;transition:transform .15s;cursor:pointer
+}
+.sd:hover{transform:scale(1.15)}
+.sd.done{background:var(--purple);color:#fff;box-shadow:0 2px 5px rgba(124,111,205,0.4)}
+.sd.today-s{background:linear-gradient(135deg,var(--pink),#f056a0);color:#fff;box-shadow:0 2px 5px rgba(232,132,176,0.45)}
+.sd.empty{background:var(--bg);color:var(--muted2);border:1.5px solid var(--border)}
+.sd.miss{background:#fceaea;color:#e85d5d;border:1.5px solid #f7c1c1}
+/* trophy grid */
+.trophy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.trophy-card{
+  background:#fff;border-radius:18px;padding:20px;text-align:center;
+  border:1.5px solid var(--border);transition:all .2s;cursor:pointer;
+  box-shadow:var(--shadow)
+}
+.trophy-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.trophy-card.locked{opacity:0.4;filter:grayscale(0.7)}
+.trophy-card.unlocked{border-color:#e8c866;background:linear-gradient(135deg,#fffdf0,#fff9e0)}
+.tc-icon{font-size:38px;display:block;margin-bottom:10px;line-height:1}
+.tc-name{font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px}
+.tc-desc{font-size:11px;color:var(--muted);font-weight:600;line-height:1.4}
+.tc-unlocked-badge{display:inline-block;margin-top:8px;background:#fef3e2;color:#7a4508;font-size:10px;font-weight:800;padding:3px 10px;border-radius:10px;border:1px solid #f0a653}
+
+/* ══════════════════════════════════
+   STATS VIEW
+══════════════════════════════════ */
+.stats-view{flex:1;overflow-y:auto;padding:24px;background:var(--bg)}
+.stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi-card{
+  background:#fff;border-radius:16px;padding:16px 18px;
+  border:1.5px solid var(--border);box-shadow:var(--shadow)
+}
+.kpi-lbl{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px}
+.kpi-val{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px}
+.kpi-chg{font-size:11px;font-weight:800;margin-top:5px}
+.kpi-up{color:var(--green)}
+.kpi-down{color:var(--red)}
+.kpi-neutral{color:var(--muted)}
+.charts-row{display:grid;grid-template-columns:1.65fr 1fr;gap:14px;margin-bottom:22px}
+.chart-card{background:#fff;border-radius:16px;padding:20px;border:1.5px solid var(--border);box-shadow:var(--shadow)}
+.chart-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:18px;letter-spacing:-0.2px}
+/* bar chart */
+.bar-chart-wrap{display:flex;align-items:flex-end;gap:10px;height:130px}
+.bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.bc-val{font-size:10px;font-weight:800;color:var(--text)}
+.bc-bar{width:100%;border-radius:8px 8px 0 0;transition:height .6s ease;min-height:4px}
+.bc-lbl{font-size:10px;font-weight:700;color:var(--muted)}
+/* donut */
+.donut-row{display:flex;align-items:center;gap:18px}
+.donut-legend{display:flex;flex-direction:column;gap:9px;flex:1}
+.dl-row{display:flex;align-items:center;gap:7px}
+.dl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dl-name{font-size:12px;font-weight:700;color:var(--text);flex:1}
+.dl-pct{font-size:12px;font-weight:800;color:var(--muted)}
+/* category progress */
+.cat-card{background:#fff;border-radius:16px;padding:20px;border:1.5px solid var(--border);box-shadow:var(--shadow);margin-bottom:22px}
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.cat-row:last-child{margin-bottom:0}
+.cat-name{font-size:13px;font-weight:700;color:var(--text);min-width:110px}
+.cat-bar-wrap{flex:1;height:10px;background:var(--bg);border-radius:20px;overflow:hidden;border:1px solid var(--border)}
+.cat-bar-fill{height:100%;border-radius:20px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.cat-val{font-size:12px;font-weight:800;color:var(--muted);min-width:44px;text-align:right}
+/* heatmap */
+.heatmap-card{background:#fff;border-radius:16px;padding:20px;border:1.5px solid var(--border);box-shadow:var(--shadow);margin-bottom:22px}
+.hm-months-row{display:flex;gap:3px;margin-bottom:6px;padding-left:20px}
+.hm-month-lbl{font-size:10px;font-weight:700;color:var(--muted)}
+.hm-grid-wrap{display:flex;gap:6px}
+.hm-dow-col{display:flex;flex-direction:column;gap:3px;justify-content:space-around;padding-top:2px}
+.hm-dow-lbl{font-size:9px;color:var(--muted2);font-weight:700;height:13px;display:flex;align-items:center}
+.hm-weeks{display:flex;gap:3px}
+.hm-week-col{display:flex;flex-direction:column;gap:3px}
+.hm-cell{
+  width:13px;height:13px;border-radius:3px;cursor:pointer;
+  transition:transform .15s
+}
+.hm-cell:hover{transform:scale(1.3)}
+/* weekly trend line */
+.trend-card{background:#fff;border-radius:16px;padding:20px;border:1.5px solid var(--border);box-shadow:var(--shadow);margin-bottom:22px}
+
+/* ══════════════════════════════════
+   AI CHAT PANEL
+══════════════════════════════════ */
+.chat-panel{
+  width:308px;border-left:1px solid var(--border);background:#fff;
+  display:flex;flex-direction:column;flex-shrink:0;transition:width .25s ease
+}
+.chat-hdr{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px
+}
+.chat-uni{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,#c4b8f0,#7c6fcd);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:20px;box-shadow:0 2px 8px rgba(124,111,205,0.3);flex-shrink:0
+}
+.chat-uni-name{font-size:14px;font-weight:900;color:var(--text)}
+.chat-uni-sub{font-size:11px;color:var(--muted);font-weight:600}
+.chat-online{width:8px;height:8px;background:#6dba7a;border-radius:50%;border:1.5px solid #fff;margin-left:auto;flex-shrink:0}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg-bubble{
+  max-width:88%;padding:10px 13px;border-radius:16px;
+  font-size:12px;font-weight:600;line-height:1.55
+}
+.msg-ai{
+  background:var(--bg);color:var(--text);
+  border-bottom-left-radius:4px;align-self:flex-start;
+  border:1px solid var(--border)
+}
+.msg-user{
+  background:var(--purple);color:#fff;
+  border-bottom-right-radius:4px;align-self:flex-end
+}
+.plan-card-bubble{
+  background:var(--bg);border-radius:14px;padding:14px;
+  border:1.5px solid var(--border);font-size:11px;
+  align-self:flex-start;max-width:95%;
+  box-shadow:var(--shadow)
+}
+.pcb-title{font-size:12px;font-weight:900;color:var(--text);margin-bottom:10px}
+.pcb-item{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px;font-weight:700;color:var(--text);font-size:12px}
+.pcb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.pcb-warn{
+  background:#fef3e2;border:1.5px solid #f0c670;border-radius:9px;
+  padding:9px 11px;margin-top:8px;font-size:11px;color:#7a4508;
+  font-weight:700;display:flex;align-items:flex-start;gap:7px;line-height:1.45
+}
+.pcb-actions{display:flex;gap:8px;margin-top:10px}
+.pcb-btn{
+  flex:1;padding:9px;border-radius:10px;border:none;
+  font-size:12px;font-weight:800;cursor:pointer;
+  transition:all .18s;font-family:'Nunito',sans-serif
+}
+.pcb-primary{background:var(--purple);color:#fff}
+.pcb-primary:hover{background:var(--purple-deep);transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,111,205,0.35)}
+.pcb-secondary{background:#fff;color:var(--text);border:1.5px solid var(--border)}
+.pcb-secondary:hover{background:var(--bg)}
+.chat-input-row{
+  padding:12px 14px;border-top:1px solid var(--border);
+  display:flex;gap:8px;align-items:center
+}
+.chat-inp{
+  flex:1;padding:9px 14px;border-radius:22px;border:1.5px solid var(--border);
+  font-size:12px;font-family:'Nunito',sans-serif;outline:none;
+  color:var(--text);background:#fff;transition:border-color .18s
+}
+.chat-inp:focus{border-color:var(--purple)}
+.chat-inp::placeholder{color:var(--muted2)}
+.chat-send-btn{
+  width:36px;height:36px;border-radius:50%;background:var(--purple);
+  border:none;color:#fff;cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .18s;flex-shrink:0;box-shadow:0 2px 8px rgba(124,111,205,0.35)
+}
+.chat-send-btn:hover{background:var(--purple-deep);transform:scale(1.08)}
+.typing-indicator{display:flex;gap:4px;align-items:center;padding:8px 12px}
+.typing-dot{width:6px;height:6px;background:var(--muted2);border-radius:50%;animation:typingBounce 1.2s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* ══ UTILITIES ══ */
+.gap-4{gap:4px}.gap-8{gap:8px}.flex{display:flex}.items-center{align-items:center}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">🦄</div>
+      UniCal AI
+    </div>
+    <nav class="top-nav">
+      <button class="top-pill active" data-page="calendar" onclick="setPage('calendar',this)">日历</button>
+      <button class="top-pill" data-page="goals" onclick="setPage('goals',this)">目标</button>
+      <button class="top-pill" data-page="trophy" onclick="setPage('trophy',this)">奖杯</button>
+      <button class="top-pill" data-page="stats" onclick="setPage('stats',this)">统计</button>
+    </nav>
+    <div class="top-right">
+      <div class="streak-badge"><span class="streak-flame">🔥</span>连胜 7 天</div>
+      <div class="avatar">AS</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <button class="sb-btn active" title="日历">📅</button>
+      <button class="sb-btn" title="时钟">🕐</button>
+      <button class="sb-btn" title="趋势">📈</button>
+      <div class="sb-spacer"></div>
+      <button class="sb-btn" title="设置">⚙️</button>
+      <button class="sb-btn" title="用户">👤</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ── MONTH VIEW ── -->
+      <div class="view active" id="view-month">
+        <div class="month-view">
+          <div class="cal-header">
+            <div class="cal-title">2025年7月</div>
+            <div class="nav-group">
+              <button class="nav-btn">‹</button>
+              <button class="nav-btn">›</button>
+            </div>
+            <div class="view-switch" style="margin-left:auto">
+              <button class="vs-btn active" onclick="setCalView('month',this)">月</button>
+              <button class="vs-btn" onclick="setCalView('week',this)">周</button>
+              <button class="vs-btn" onclick="setCalView('day',this)">日</button>
+            </div>
+          </div>
+          <!-- progress bars in month view -->
+          <div class="week-progress-bar-section">
+            <div class="progress-section-title">本月任务进度</div>
+            <div class="task-progress-rows">
+              <div class="tp-row"><div class="tp-dot" style="background:#7c6fcd"></div><div class="tp-name">斯德哥尔摩旅行</div><div class="tp-bar"><div class="tp-fill" style="width:100%;background:#7c6fcd"></div></div><div class="tp-pct" style="color:#5347a8">100%</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#e784b0"></div><div class="tp-name">竞品分析报告</div><div class="tp-bar"><div class="tp-fill" style="width:60%;background:#e784b0"></div></div><div class="tp-pct">60%</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#4bbfa8"></div><div class="tp-name">每日晨跑 30min</div><div class="tp-bar"><div class="tp-fill" style="width:71%;background:#4bbfa8"></div></div><div class="tp-pct">15/21</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#f0a653"></div><div class="tp-name">月度复盘</div><div class="tp-bar"><div class="tp-fill" style="width:25%;background:#f0a653"></div></div><div class="tp-pct">25%</div></div>
+            </div>
+          </div>
+          <div class="month-grid-wrap">
+            <div class="month-dow-row">
+              <div class="dow-cell">日</div><div class="dow-cell">一</div><div class="dow-cell">二</div>
+              <div class="dow-cell">三</div><div class="dow-cell">四</div><div class="dow-cell">五</div><div class="dow-cell">六</div>
+            </div>
+            <div class="month-grid" id="month-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WEEK VIEW ── -->
+      <div class="view" id="view-week">
+        <div class="week-view">
+          <div class="cal-header">
+            <div class="cal-title">2025年7月 第三周</div>
+            <div class="nav-group">
+              <button class="nav-btn">‹</button>
+              <button class="nav-btn">›</button>
+            </div>
+            <div class="view-switch" style="margin-left:auto">
+              <button class="vs-btn" onclick="setCalView('month',this)">月</button>
+              <button class="vs-btn active" onclick="setCalView('week',this)">周</button>
+              <button class="vs-btn" onclick="setCalView('day',this)">日</button>
+            </div>
+          </div>
+          <div class="week-progress-bar-section">
+            <div class="progress-section-title">本周任务进度</div>
+            <div class="task-progress-rows">
+              <div class="tp-row"><div class="tp-dot" style="background:#7c6fcd"></div><div class="tp-name">斯德哥尔摩旅行</div><div class="tp-bar"><div class="tp-fill" style="width:100%;background:#7c6fcd"></div></div><div class="tp-pct" style="color:#5347a8">完成 ✓</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#e784b0"></div><div class="tp-name">竞品分析报告</div><div class="tp-bar"><div class="tp-fill" style="width:60%;background:#e784b0"></div></div><div class="tp-pct">6/10h</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#4bbfa8"></div><div class="tp-name">每日晨跑</div><div class="tp-bar"><div class="tp-fill" style="width:71%;background:#4bbfa8"></div></div><div class="tp-pct">5/7天</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#f0a653"></div><div class="tp-name">月度复盘</div><div class="tp-bar"><div class="tp-fill" style="width:25%;background:#f0a653"></div></div><div class="tp-pct">25%</div></div>
+            </div>
+          </div>
+          <div class="week-days-hdr">
+            <div style="border-left:none;padding:10px 6px;display:flex;align-items:center;justify-content:center"><span style="font-size:10px;color:var(--muted);font-weight:700">时间</span></div>
+            <div class="wdh-cell"><div class="wdh-dow">日</div><div class="wdh-num">13</div></div>
+            <div class="wdh-cell"><div class="wdh-dow">一</div><div class="wdh-num">14</div></div>
+            <div class="wdh-cell"><div class="wdh-dow">二</div><div class="wdh-today">15</div></div>
+            <div class="wdh-cell"><div class="wdh-dow">三</div><div class="wdh-num">16</div></div>
+            <div class="wdh-cell"><div class="wdh-dow">四</div><div class="wdh-num">17</div></div>
+            <div class="wdh-cell"><div class="wdh-dow">五</div><div class="wdh-num">18</div></div>
+            <div class="wdh-cell"><div class="wdh-dow">六</div><div class="wdh-num">19</div></div>
+          </div>
+          <div class="week-body-scroll">
+            <div class="wtime-col" id="wtime-col"></div>
+            <div class="week-grid-cols" id="week-grid-cols"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DAY VIEW ── -->
+      <div class="view" id="view-day">
+        <div class="day-main">
+          <div class="day-hdr">
+            <div class="nav-group">
+              <button class="nav-btn">‹</button>
+              <button class="nav-btn">›</button>
+            </div>
+            <div>
+              <div class="day-title">周二，2025年7月15日</div>
+              <div class="day-sub">今天 · 3 个事件 · 3 个任务</div>
+            </div>
+            <div class="today-chip" style="margin-left:auto">今天</div>
+            <div class="view-switch">
+              <button class="vs-btn" onclick="setCalView('month',this)">月</button>
+              <button class="vs-btn" onclick="setCalView('week',this)">周</button>
+              <button class="vs-btn active" onclick="setCalView('day',this)">日</button>
+            </div>
+          </div>
+          <div class="week-progress-bar-section">
+            <div class="progress-section-title">今日任务进度</div>
+            <div class="task-progress-rows">
+              <div class="tp-row"><div class="tp-dot" style="background:#4bbfa8"></div><div class="tp-name">晨跑 30min</div><div class="tp-bar"><div class="tp-fill" style="width:100%;background:#4bbfa8"></div></div><div class="tp-pct" style="color:#0a5e49">✓ 完成</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#e784b0"></div><div class="tp-name">竞品分析 2h</div><div class="tp-bar"><div class="tp-fill" style="width:50%;background:#e784b0"></div></div><div class="tp-pct">1/2h</div></div>
+              <div class="tp-row"><div class="tp-dot" style="background:#f0a653"></div><div class="tp-name">数据分析阶段</div><div class="tp-bar"><div class="tp-fill" style="width:0%;background:#f0a653"></div></div><div class="tp-pct">待开始</div></div>
+            </div>
+          </div>
+          <div class="day-timeline-wrap">
+            <div class="dtime-col" id="dtime-col"></div>
+            <div class="devents-col" id="devents-col"></div>
+          </div>
+        </div>
+        <div class="day-sidebar">
+          <div class="ds-stat-card" style="background:#ede9fb;border-color:#d4c8f5">
+            <div class="ds-stat-title" style="color:var(--purple)">今日完成率</div>
+            <div class="ds-stat-big" style="color:var(--purple-deep)">67%</div>
+            <div class="ds-stat-sub" style="color:var(--purple)">2/3 任务进行中</div>
+            <div class="ds-stat-bar" style="background:rgba(124,111,205,0.15)"><div class="ds-stat-bar-fill" style="width:67%;background:var(--purple)"></div></div>
+          </div>
+          <div class="ds-stat-card" style="background:#e0f7f3;border-color:#9fe1cb">
+            <div class="ds-stat-title" style="color:#0a5e49">今日专注时长</div>
+            <div class="ds-stat-big" style="color:#074033">1.5h</div>
+            <div class="ds-stat-sub" style="color:#1d9e75">目标 4h · 37%</div>
+            <div class="ds-stat-bar" style="background:rgba(75,191,168,0.2)"><div class="ds-stat-bar-fill" style="width:37%;background:var(--teal)"></div></div>
+          </div>
+          <div class="ds-sec-title">今日任务清单</div>
+          <div class="ds-task-item">
+            <div class="dsti-hdr">
+              <div class="dsti-cb done" id="cb-run" onclick="toggleTask('cb-run','run-name')">✓</div>
+              <div><div class="dsti-name" id="run-name" style="text-decoration:line-through;color:var(--muted)">晨跑 30min</div><div class="dsti-meta">7:00 · 运动 · 已完成</div></div>
+            </div>
+            <div class="dsti-prog"><div class="dsti-prog-fill" style="width:100%;background:var(--teal)"></div></div>
+          </div>
+          <div class="ds-task-item">
+            <div class="dsti-hdr">
+              <div class="dsti-cb" id="cb-analysis" onclick="toggleTask('cb-analysis','analysis-name')"></div>
+              <div><div class="dsti-name" id="analysis-name">竞品分析报告</div><div class="dsti-meta">10:00 - 12:00 · 工作</div></div>
+            </div>
+            <div class="dsti-prog"><div class="dsti-prog-fill" style="width:50%;background:var(--pink)"></div></div>
+          </div>
+          <div class="ds-task-item">
+            <div class="dsti-hdr">
+              <div class="dsti-cb" id="cb-data" onclick="toggleTask('cb-data','data-name')"></div>
+              <div><div class="dsti-name" id="data-name">数据分析阶段</div><div class="dsti-meta">13:00 - 15:00 · 工作</div></div>
+            </div>
+            <div class="dsti-prog"><div class="dsti-prog-fill" style="width:0%;background:var(--amber)" id="data-bar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TROPHY VIEW ── -->
+      <div class="view" id="view-trophy">
+        <div class="trophy-view">
+          <div class="trophy-hero">
+            <div class="hero-uni">🦄</div>
+            <div class="hero-info">
+              <h2>旅行自律者</h2>
+              <p>旅行期间坚持每日晨跑，获得本周最佳表现！</p>
+              <div class="hero-stats">
+                <div class="hs-card"><div class="hs-num">7</div><div class="hs-lbl">连胜天数</div></div>
+                <div class="hs-card"><div class="hs-num">4</div><div class="hs-lbl">已解锁奖杯</div></div>
+                <div class="hs-card"><div class="hs-num">142h</div><div class="hs-lbl">专注总时长</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="streak-board">
+            <div class="trophy-section-header">🔥 本月连胜日历</div>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted)"><div style="width:10px;height:10px;background:var(--purple);border-radius:3px"></div>已完成</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted)"><div style="width:10px;height:10px;background:var(--pink);border-radius:3px"></div>今天</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted)"><div style="width:10px;height:10px;background:#fceaea;border:1.5px solid #f7c1c1;border-radius:3px"></div>已错过</div>
+            </div>
+            <div class="streak-grid">
+              <div class="streak-row">
+                <div class="streak-day-lbl">第1周</div>
+                <div class="sd done">1</div><div class="sd done">2</div><div class="sd done">3</div><div class="sd done">4</div><div class="sd done">5</div><div class="sd done">6</div><div class="sd done">7</div>
+              </div>
+              <div class="streak-row">
+                <div class="streak-day-lbl">第2周</div>
+                <div class="sd done">8</div><div class="sd done">9</div><div class="sd done">10</div><div class="sd done">11</div><div class="sd miss">12</div><div class="sd done">13</div><div class="sd done">14</div>
+              </div>
+              <div class="streak-row">
+                <div class="streak-day-lbl">第3周</div>
+                <div class="sd today-s">15</div><div class="sd empty">16</div><div class="sd empty">17</div><div class="sd empty">18</div><div class="sd empty">19</div><div class="sd empty">20</div><div class="sd empty">21</div>
+              </div>
+              <div class="streak-row">
+                <div class="streak-day-lbl">第4周</div>
+                <div class="sd empty">22</div><div class="sd empty">23</div><div class="sd empty">24</div><div class="sd empty">25</div><div class="sd empty">26</div><div class="sd empty">27</div><div class="sd empty">28</div>
+              </div>
+            </div>
+          </div>
+          <div class="trophy-section-header">🏆 成就徽章</div>
+          <div class="trophy-grid">
+            <div class="trophy-card unlocked"><span class="tc-icon">🦄</span><div class="tc-name">旅行自律者</div><div class="tc-desc">旅行期间每日坚持运动打卡</div><div class="tc-unlocked-badge">本周新获</div></div>
+            <div class="trophy-card unlocked"><span class="tc-icon">🌅</span><div class="tc-name">早起挑战者</div><div class="tc-desc">连续 7 天早晨完成首个任务</div><div class="tc-unlocked-badge">已解锁</div></div>
+            <div class="trophy-card unlocked"><span class="tc-icon">📊</span><div class="tc-name">分析达人</div><div class="tc-desc">成功完成首份竞品分析报告</div><div class="tc-unlocked-badge">已解锁</div></div>
+            <div class="trophy-card unlocked"><span class="tc-icon">🏃</span><div class="tc-name">运动先锋</div><div class="tc-desc">累计完成运动任务 50 小时</div><div class="tc-unlocked-badge">已解锁</div></div>
+            <div class="trophy-card locked"><span class="tc-icon">💎</span><div class="tc-name">百小时专注</div><div class="tc-desc">累计专注学习满 100 小时</div><div class="tc-unlocked-badge" style="background:#f0eef8;border-color:var(--border);color:var(--muted)">还差 58h</div></div>
+            <div class="trophy-card locked"><span class="tc-icon">🌙</span><div class="tc-name">月度传说</div><div class="tc-desc">本月连胜天数达到 30 天</div><div class="tc-unlocked-badge" style="background:#f0eef8;border-color:var(--border);color:var(--muted)">还差 23天</div></div>
+            <div class="trophy-card locked"><span class="tc-icon">🎯</span><div class="tc-name">零失误周</div><div class="tc-desc">整周所有 AI 规划任务全部完成</div><div class="tc-unlocked-badge" style="background:#f0eef8;border-color:var(--border);color:var(--muted)">未解锁</div></div>
+            <div class="trophy-card locked"><span class="tc-icon">🚀</span><div class="tc-name">超级执行者</div><div class="tc-desc">单日完成 5 个以上规划任务</div><div class="tc-unlocked-badge" style="background:#f0eef8;border-color:var(--border);color:var(--muted)">未解锁</div></div>
+            <div class="trophy-card locked"><span class="tc-icon">🌈</span><div class="tc-name">全能达人</div><div class="tc-desc">同时管理工作、运动、学习三类目标</div><div class="tc-unlocked-badge" style="background:#f0eef8;border-color:var(--border);color:var(--muted)">未解锁</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STATS VIEW ── -->
+      <div class="view" id="view-stats">
+        <div class="stats-view">
+          <div class="stats-kpi-row">
+            <div class="kpi-card"><div class="kpi-lbl">本周专注时长</div><div class="kpi-val">14.5h</div><div class="kpi-chg kpi-up">↑ 18% 较上周</div></div>
+            <div class="kpi-card"><div class="kpi-lbl">完成任务数</div><div class="kpi-val">23</div><div class="kpi-chg kpi-up">↑ 4 较上周</div></div>
+            <div class="kpi-card"><div class="kpi-lbl">任务完成率</div><div class="kpi-val">86%</div><div class="kpi-chg kpi-up">↑ 12pp</div></div>
+            <div class="kpi-card"><div class="kpi-lbl">当前连胜</div><div class="kpi-val">7天</div><div class="kpi-chg kpi-neutral">最长 14 天</div></div>
+          </div>
+          <div class="charts-row">
+            <div class="chart-card">
+              <div class="chart-title">每日专注时长（本周）</div>
+              <div class="bar-chart-wrap">
+                <div class="bc-col"><div class="bc-val">1.5h</div><div class="bc-bar" style="height:30%;background:#d9d2f5"></div><div class="bc-lbl">日</div></div>
+                <div class="bc-col"><div class="bc-val">3.0h</div><div class="bc-bar" style="height:60%;background:#7c6fcd"></div><div class="bc-lbl">一</div></div>
+                <div class="bc-col"><div class="bc-val">2.5h</div><div class="bc-bar" style="height:50%;background:#9d93d8"></div><div class="bc-lbl">二</div></div>
+                <div class="bc-col"><div class="bc-val">2.0h</div><div class="bc-bar" style="height:40%;background:#7c6fcd"></div><div class="bc-lbl">三</div></div>
+                <div class="bc-col"><div class="bc-val">3.5h</div><div class="bc-bar" style="height:70%;background:#5347a8"></div><div class="bc-lbl">四</div></div>
+                <div class="bc-col"><div class="bc-val">1.0h</div><div class="bc-bar" style="height:20%;background:#d9d2f5"></div><div class="bc-lbl">五</div></div>
+                <div class="bc-col"><div class="bc-val">1.0h</div><div class="bc-bar" style="height:20%;background:#d9d2f5"></div><div class="bc-lbl">六</div></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">任务类型分布</div>
+              <div class="donut-row">
+                <svg width="100" height="100" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#f0eef8" stroke-width="16"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#7c6fcd" stroke-width="16" stroke-dasharray="95.5 143.3" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#4bbfa8" stroke-width="16" stroke-dasharray="57.3 181.4" stroke-dashoffset="-95.5" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#e784b0" stroke-width="16" stroke-dasharray="38.2 200.5" stroke-dashoffset="-152.8" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#f0a653" stroke-width="16" stroke-dasharray="26.4 212.3" stroke-dashoffset="-191" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="55" text-anchor="middle" font-size="14" font-weight="800" fill="#2d2456" font-family="Nunito,sans-serif">23</text>
+                </svg>
+                <div class="donut-legend">
+                  <div class="dl-row"><div class="dl-dot" style="background:#7c6fcd"></div><div class="dl-name">工作</div><div class="dl-pct">40%</div></div>
+                  <div class="dl-row"><div class="dl-dot" style="background:#4bbfa8"></div><div class="dl-name">运动</div><div class="dl-pct">24%</div></div>
+                  <div class="dl-row"><div class="dl-dot" style="background:#e784b0"></div><div class="dl-name">旅行</div><div class="dl-pct">16%</div></div>
+                  <div class="dl-row"><div class="dl-dot" style="background:#f0a653"></div><div class="dl-name">学习</div><div class="dl-pct">11%</div></div>
+                  <div class="dl-row"><div class="dl-dot" style="background:#d9d2f5"></div><div class="dl-name">其他</div><div class="dl-pct">9%</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cat-card">
+            <div class="chart-title">目标完成进度</div>
+            <div class="cat-row"><div class="cat-name">竞品分析报告</div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:60%;background:#e784b0"></div></div><div class="cat-val">6 / 10h</div></div>
+            <div class="cat-row"><div class="cat-name">每日晨跑计划</div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:71%;background:#4bbfa8"></div></div><div class="cat-val">15 / 21天</div></div>
+            <div class="cat-row"><div class="cat-name">斯德哥尔摩行程</div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:100%;background:#7c6fcd"></div></div><div class="cat-val">3 / 3天 ✓</div></div>
+            <div class="cat-row"><div class="cat-name">月度复盘总结</div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:25%;background:#f0a653"></div></div><div class="cat-val">1 / 4h</div></div>
+            <div class="cat-row"><div class="cat-name">Python 学习计划</div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:42%;background:#5ba4e5"></div></div><div class="cat-val">4.2 / 10h</div></div>
+          </div>
+          <div class="heatmap-card">
+            <div class="chart-title">活跃度热力图（近 12 周）</div>
+            <div class="hm-months-row">
+              <span class="hm-month-lbl" style="flex:1">五月</span>
+              <span class="hm-month-lbl" style="flex:1">六月</span>
+              <span class="hm-month-lbl" style="flex:1">七月</span>
+            </div>
+            <div class="hm-grid-wrap">
+              <div class="hm-dow-col">
+                <div class="hm-dow-lbl">一</div>
+                <div class="hm-dow-lbl">三</div>
+                <div class="hm-dow-lbl">五</div>
+                <div class="hm-dow-lbl">日</div>
+              </div>
+              <div class="hm-weeks" id="heatmap-weeks"></div>
+            </div>
+          </div>
+          <div class="trend-card">
+            <div class="chart-title">近 8 周专注趋势</div>
+            <svg width="100%" height="80" viewBox="0 0 500 80" preserveAspectRatio="none" style="overflow:visible">
+              <defs>
+                <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#7c6fcd" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#7c6fcd" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,65 L62,50 L125,42 L187,38 L250,30 L312,18 L375,22 L500,10" fill="none" stroke="#7c6fcd" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M0,65 L62,50 L125,42 L187,38 L250,30 L312,18 L375,22 L500,10 L500,80 L0,80 Z" fill="url(#trendGrad)"/>
+              <circle cx="0" cy="65" r="4" fill="#7c6fcd"/><circle cx="62" cy="50" r="4" fill="#7c6fcd"/><circle cx="125" cy="42" r="4" fill="#7c6fcd"/><circle cx="187" cy="38" r="4" fill="#7c6fcd"/><circle cx="250" cy="30" r="4" fill="#7c6fcd"/><circle cx="312" cy="18" r="4" fill="#7c6fcd"/><circle cx="375" cy="22" r="4" fill="#7c6fcd"/><circle cx="500" cy="10" r="5" fill="#5347a8" stroke="#fff" stroke-width="2"/>
+              <text x="0" y="75" font-size="9" fill="#8b82b8" font-family="Nunito,sans-serif" font-weight="700">5/26</text>
+              <text x="450" y="75" font-size="9" fill="#8b82b8" font-family="Nunito,sans-serif" font-weight="700">7/14</text>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:700;margin-top:4px">
+              <span>周均 8.2h</span><span>周均 10.5h</span><span>周均 12.8h</span><span style="color:var(--purple-deep);font-weight:900">本周 14.5h ↑</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end content -->
+
+    <!-- AI CHAT PANEL -->
+    <div class="chat-panel" id="chat-panel">
+      <div class="chat-hdr">
+        <div class="chat-uni">🦄</div>
+        <div>
+          <div class="chat-uni-name">Uni</div>
+          <div class="chat-uni-sub">你的 AI 日程助理</div>
+        </div>
+        <div class="chat-online" title="在线"></div>
+      </div>
+      <div class="chat-msgs" id="chat-msgs">
+        <div class="msg-bubble msg-ai">早上好！今天有 2 个任务待完成，需要我帮你安排吗？</div>
+        <div class="msg-bubble msg-user">我下周二要去斯德哥尔摩旅行三天，这期间想保持每天 30 分钟运动，帮我排一下。</div>
+        <div class="msg-bubble msg-ai">好的！运动安排在早晨还是晚上？</div>
+        <div class="msg-bubble msg-user">早晨。</div>
+        <div class="plan-card-bubble">
+          <div class="pcb-title">斯德哥尔摩行程草稿</div>
+          <div class="pcb-item"><div class="pcb-dot" style="background:#7c6fcd"></div><span>周二-周四 斯德哥尔摩旅行（全天）</span></div>
+          <div class="pcb-item"><div class="pcb-dot" style="background:#4bbfa8"></div><span>每天 07:00 晨跑 30 min</span></div>
+          <div class="pcb-warn">⚠️ 周三 9:00 与线上会议冲突，已自动调整至下午 5 点。</div>
+          <div class="pcb-actions">
+            <button class="pcb-btn pcb-primary" onclick="onePlanClick()">一键入历 ↗</button>
+            <button class="pcb-btn pcb-secondary">调整</button>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-inp" id="chat-input" placeholder="有任何计划，先跟我聊聊..." onkeydown="handleChatKey(event)"/>
+        <button class="chat-send-btn" onclick="sendChat()">→</button>
+      </div>
+    </div>
+
+  </div><!-- end main -->
+</div><!-- end app -->
+
+<script>
+// ═══════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════
+const monthEvents = {
+  3:  [{text:'项目汇报',cls:'chip-teal'}],
+  7:  [{text:'每日晨跑',cls:'chip-teal'}],
+  8:  [{text:'斯德哥尔摩',cls:'chip-purple'},{text:'晨跑 30min',cls:'chip-teal'}],
+  9:  [{text:'斯德哥尔摩',cls:'chip-purple'},{text:'线上会议',cls:'chip-blue'}],
+  10: [{text:'斯德哥尔摩',cls:'chip-purple'},{text:'下午运动',cls:'chip-teal'}],
+  14: [{text:'竞品分析',cls:'chip-pink'}],
+  15: [{text:'竞品分析',cls:'chip-pink'},{text:'数据分析',cls:'chip-amber'}],
+  16: [{text:'团队站会',cls:'chip-blue'},{text:'竞品分析',cls:'chip-pink'}],
+  21: [{text:'每日晨跑',cls:'chip-teal'}],
+  28: [{text:'月度复盘',cls:'chip-amber'}],
+};
+
+const TIMES = ['7:00','8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+
+const weekEvents = [
+  // col index 0-6 (Sun-Sat), slotIndex (0=7:00)
+  {col:1,slot:0,h:1,text:'晨跑',cls:'we-teal'},{col:1,slot:2,h:1,text:'竞品分析',cls:'we-pink'},{col:1,slot:6,h:1,text:'资料收集',cls:'we-amber'},
+  {col:2,slot:0,h:1,text:'晨跑',cls:'we-teal'},{col:2,slot:1,h:2,text:'斯德哥尔摩',cls:'we-purple'},{col:2,slot:3,h:1,text:'竞品分析',cls:'we-pink'},{col:2,slot:6,h:1,text:'数据分析',cls:'we-amber'},
+  {col:3,slot:1,h:2,text:'斯德哥尔摩',cls:'we-purple'},{col:3,slot:2,h:1,text:'线上会议',cls:'we-blue'},{col:3,slot:6,h:1,text:'草稿撰写',cls:'we-amber'},{col:3,slot:9,h:1,text:'运动5pm',cls:'we-teal'},
+  {col:4,slot:0,h:1,text:'晨跑',cls:'we-teal'},{col:4,slot:1,h:2,text:'斯德哥尔摩',cls:'we-purple'},{col:4,slot:3,h:1,text:'竞品分析',cls:'we-pink'},
+  {col:5,slot:6,h:1,text:'复盘修改',cls:'we-amber'},
+  {col:6,slot:0,h:1,text:'晨跑',cls:'we-teal'},{col:6,slot:8,h:1,text:'月度复盘',cls:'we-amber'},
+];
+
+const daySlots = [
+  {slot:0,text:'晨跑 30min',cls:'we-teal',icon:'🏃',time:'7:00 - 7:30',done:true,pct:100},
+  {slot:1,text:'斯德哥尔摩旅行',cls:'we-purple',icon:'✈️',time:'全天 · 第 1/3 天',done:false,pct:33},
+  {slot:3,text:'竞品分析 · 资料收集',cls:'we-pink',icon:'📊',time:'10:00 - 12:00 · 进行中',done:false,pct:50},
+  {slot:6,text:'数据分析阶段',cls:'we-amber',icon:'🔬',time:'13:00 - 15:00 · 待开始',done:false,pct:0},
+];
+
+// ═══════════════════════════════════════
+// BUILD MONTH GRID
+// ═══════════════════════════════════════
+function buildMonthGrid(){
+  const grid = document.getElementById('month-grid');
+  // July 2025 starts on Tuesday (index 2)
+  const startDow = 2; // 0=Sun
+  const daysInMonth = 31;
+  const daysInPrevMonth = 30; // June
+  let html = '';
+  // prev month padding
+  for(let i=0;i<startDow;i++){
+    const d = daysInPrevMonth - startDow + 1 + i;
+    html += `<div class="mday other-month"><div class="mday-num">${d}</div></div>`;
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday = d===15;
+    const evs = monthEvents[d]||[];
+    let chipsHtml = '';
+    evs.slice(0,2).forEach(e=>{chipsHtml+=`<div class="event-chip ${e.cls}">${e.text}</div>`;});
+    if(evs.length>2) chipsHtml+=`<div class="more-chip">+${evs.length-2} 更多</div>`;
+    html+=`<div class="mday ${isToday?'today':''}"><div class="mday-num">${d}</div>${chipsHtml}</div>`;
+  }
+  // next month
+  const total = startDow + daysInMonth;
+  const rem = 35 - total;
+  for(let d=1;d<=rem;d++){
+    html+=`<div class="mday other-month"><div class="mday-num">${d}</div></div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ═══════════════════════════════════════
+// BUILD WEEK GRID
+// ═══════════════════════════════════════
+function buildWeekGrid(){
+  const timeCol = document.getElementById('wtime-col');
+  const gridCols = document.getElementById('week-grid-cols');
+  let timeHtml = '';
+  TIMES.forEach(t=>{timeHtml+=`<div class="wtime-slot"><span class="wtime-lbl">${t}</span></div>`;});
+  timeCol.innerHTML = timeHtml;
+
+  // build 7 columns
+  let colsHtml = '';
+  for(let c=0;c<7;c++){
+    const isToday = c===2;
+    const eventsForCol = weekEvents.filter(e=>e.col===c);
+    let slotsHtml = '';
+    for(let s=0;s<TIMES.length;s++){
+      const ev = eventsForCol.find(e=>e.slot===s);
+      if(ev){
+        const top = s*56;
+        const height = ev.h*56-6;
+        slotsHtml+=`<div class="wslot"></div>`;
+        // we'll overlay absolutely
+      } else {
+        slotsHtml+=`<div class="wslot"></div>`;
+      }
+    }
+    let evHtml = '';
+    eventsForCol.forEach(ev=>{
+      const topPx = ev.slot*56+4;
+      const heightPx = ev.h*56-8;
+      evHtml+=`<div class="wevent ${ev.cls}" style="top:${topPx}px;height:${heightPx}px">${ev.text}</div>`;
+    });
+    colsHtml+=`<div class="wcol ${isToday?'today-col':''}" style="position:relative">`;
+    for(let s=0;s<TIMES.length;s++) colsHtml+=`<div class="wslot"></div>`;
+    colsHtml+=evHtml+'</div>';
+  }
+  gridCols.innerHTML = colsHtml;
+}
+
+// ═══════════════════════════════════════
+// BUILD DAY VIEW
+// ═══════════════════════════════════════
+function buildDayView(){
+  const dtimeCol = document.getElementById('dtime-col');
+  const deventsCol = document.getElementById('devents-col');
+  let timeHtml='';
+  TIMES.forEach(t=>{timeHtml+=`<div class="dtime-slot"><span class="time-label" style="font-size:10px;color:var(--muted);font-weight:700">${t}</span></div>`;});
+  dtimeCol.innerHTML = timeHtml;
+
+  let slotsHtml='';
+  for(let s=0;s<TIMES.length;s++){
+    const ev = daySlots.find(e=>e.slot===s);
+    if(ev){
+      const bgMap={
+        'we-teal':'background:#e0f7f3;color:#0a5e49;border-left-color:#4bbfa8',
+        'we-purple':'background:#ede9fb;color:#5347a8;border-left-color:#7c6fcd',
+        'we-pink':'background:#fce9f3;color:#993356;border-left-color:#e784b0',
+        'we-amber':'background:#fef3e2;color:#7a4508;border-left-color:#f0a653',
+        'we-blue':'background:#e6f1fb;color:#175fa5;border-left-color:#5ba4e5',
+      };
+      const st = bgMap[ev.cls]||'';
+      const barColor = ev.cls==='we-teal'?'#4bbfa8':ev.cls==='we-purple'?'#7c6fcd':ev.cls==='we-pink'?'#e784b0':ev.cls==='we-amber'?'#f0a653':'#5ba4e5';
+      const doneTag = ev.done?'<span style="margin-left:auto;font-size:14px">✅</span>':'';
+      const miniBar = ev.pct>0?`<div class="devent-mini-bar"><div class="dmb-pct" style="color:${barColor}">${ev.pct}%</div><div class="dmb-bar"><div class="dmb-fill" style="width:${ev.pct}%;background:${barColor}"></div></div></div>`:'<div class="devent-mini-bar" style="opacity:0.5"><div class="dmb-pct" style="color:var(--muted)">待开始</div></div>';
+      slotsHtml+=`<div class="dslot"><div class="devent" style="${st}"><span class="devent-icon">${ev.icon}</span><div class="devent-info"><div class="devent-title">${ev.text}</div><div class="devent-time">${ev.time}</div></div>${miniBar}${doneTag}</div></div>`;
+    } else {
+      slotsHtml+=`<div class="dslot"></div>`;
+    }
+  }
+  deventsCol.innerHTML = slotsHtml;
+}
+
+// ═══════════════════════════════════════
+// BUILD HEATMAP
+// ═══════════════════════════════════════
+function buildHeatmap(){
+  const wrap = document.getElementById('heatmap-weeks');
+  const colors = ['#f0eef8','#d9d2f5','#b09fe8','#7c6fcd','#5347a8'];
+  let html='';
+  for(let w=0;w<12;w++){
+    html+=`<div class="hm-week-col">`;
+    for(let d=0;d<7;d++){
+      const r = Math.random();
+      const idx = r<0.25?0:r<0.5?1:r<0.7?2:r<0.88?3:4;
+      html+=`<div class="hm-cell" style="background:${colors[idx]}" title="专注 ${(idx*1.2+0.5).toFixed(1)}h"></div>`;
+    }
+    html+=`</div>`;
+  }
+  wrap.innerHTML=html;
+}
+
+// ═══════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════
+let currentPage='calendar';
+let currentCalView='month';
+
+function setPage(page, btn){
+  currentPage=page;
+  document.querySelectorAll('.top-pill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // hide all views
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const chatPanel = document.getElementById('chat-panel');
+  if(page==='calendar'){
+    document.getElementById('view-'+currentCalView).classList.add('active');
+    chatPanel.style.display='flex';
+  } else if(page==='trophy'){
+    document.getElementById('view-trophy').classList.add('active');
+    chatPanel.style.display='none';
+  } else if(page==='stats'){
+    document.getElementById('view-stats').classList.add('active');
+    chatPanel.style.display='none';
+  } else {
+    // goals - show week for now
+    document.getElementById('view-week').classList.add('active');
+    chatPanel.style.display='flex';
+  }
+}
+
+function setCalView(view, btn){
+  currentCalView=view;
+  // update all view-switch buttons
+  document.querySelectorAll('.vs-btn').forEach(b=>b.classList.remove('active'));
+  // find the matching ones
+  document.querySelectorAll('.vs-btn').forEach(b=>{
+    if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes(`'${view}'`)) b.classList.add('active');
+  });
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  if(view==='month') document.getElementById('view-month').classList.add('active');
+  else if(view==='week') document.getElementById('view-week').classList.add('active');
+  else if(view==='day') document.getElementById('view-day').classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// TASK CHECKBOXES
+// ═══════════════════════════════════════
+function toggleTask(cbId, nameId){
+  const cb = document.getElementById(cbId);
+  const name = document.getElementById(nameId);
+  cb.classList.toggle('done');
+  if(cb.classList.contains('done')){
+    cb.textContent='✓';
+    if(name){ name.style.textDecoration='line-through'; name.style.color='var(--muted)'; }
+  } else {
+    cb.textContent='';
+    if(name){ name.style.textDecoration='none'; name.style.color='var(--text)'; }
+  }
+}
+
+// ═══════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════
+const aiReplies = [
+  '好的！我来帮你规划一下。你希望什么时候开始？',
+  '明白！我已经检测到你日历上的空闲时段，可以帮你安排。',
+  '没问题，我会把这个任务拆分成几个阶段，方便你每天完成。',
+  '检测到潜在冲突！你周三上午已有会议，我建议调整到下午 3 点，可以吗？',
+  '已经帮你排好了！点击「一键入历」即可同步到你的日历。✨',
+  '你的专注力表现很棒！这周完成率比上周提高了 18%，继续加油！🦄',
+];
+let replyIdx = 0;
+
+function sendChat(){
+  const input = document.getElementById('chat-input');
+  const msgs = document.getElementById('chat-msgs');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value='';
+  // user bubble
+  const userDiv = document.createElement('div');
+  userDiv.className='msg-bubble msg-user';
+  userDiv.textContent=text;
+  msgs.appendChild(userDiv);
+  // typing
+  const typing = document.createElement('div');
+  typing.className='msg-bubble msg-ai';
+  typing.innerHTML='<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  msgs.appendChild(typing);
+  msgs.scrollTop=msgs.scrollHeight;
+  setTimeout(()=>{
+    typing.innerHTML=aiReplies[replyIdx%aiReplies.length];
+    replyIdx++;
+    msgs.scrollTop=msgs.scrollHeight;
+  },900+Math.random()*600);
+}
+
+function handleChatKey(e){if(e.key==='Enter') sendChat();}
+
+function onePlanClick(){
+  const msgs = document.getElementById('chat-msgs');
+  const bubble = document.createElement('div');
+  bubble.className='msg-bubble msg-ai';
+  bubble.textContent='✅ 已成功添加到日历！周二到周四的旅行日程和每日晨跑已排好。祝旅途愉快！🦄';
+  msgs.appendChild(bubble);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+buildMonthGrid();
+buildWeekGrid();
+buildDayView();
+buildHeatmap();
+</script>
+</body>
+</html>

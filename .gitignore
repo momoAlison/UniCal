@@ -24,7 +24,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files (绝对不能提交的环境变量)
+# local env files
 .env*.local
 
 # vercel

@@ -1,26 +1,55 @@
+"use client";
+
+import { useState } from "react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import CalendarView from "@/components/CalendarView";
 import ChatBox from "@/components/ChatBox";
+import TrophyView from "@/components/TrophyView";
+import StatsView from "@/components/StatsView";
+
+type Page = "calendar" | "goals" | "trophy" | "stats";
 
 export default function Home() {
+    const [currentPage, setCurrentPage] = useState<Page>("calendar");
+    const [sidebarItem, setSidebarItem] = useState("calendar");
+
+    const showChat = currentPage === "calendar" || currentPage === "goals";
+
     return (
-        <div className="min-h-screen bg-[#f8f6ff] flex items-center justify-center p-4">
-            <div className="bg-white border border-[#e8e4f0] rounded-2xl overflow-hidden flex flex-col w-full max-w-[1200px] h-[640px] shadow-sm">
-                {/* Top Bar */}
-                <Header />
+        <div
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100vh",
+                overflow: "hidden",
+            }}
+        >
+            <Header currentPage={currentPage} onPageChange={setCurrentPage} />
 
-                {/* Main Content */}
-                <div className="flex flex-1 overflow-hidden">
-                    {/* Left Sidebar */}
-                    <Sidebar />
+            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                <Sidebar
+                    activeItem={sidebarItem}
+                    onItemChange={setSidebarItem}
+                />
 
-                    {/* Calendar Panel */}
-                    <CalendarView />
-
-                    {/* Chat Panel */}
-                    <ChatBox />
+                {/* Content area */}
+                <div
+                    style={{
+                        flex: 1,
+                        display: "flex",
+                        overflow: "hidden",
+                        position: "relative",
+                    }}
+                >
+                    {(currentPage === "calendar" ||
+                        currentPage === "goals") && <CalendarView />}
+                    {currentPage === "trophy" && <TrophyView />}
+                    {currentPage === "stats" && <StatsView />}
                 </div>
+
+                {/* AI Chat Panel — shown only on calendar/goals pages */}
+                {showChat && <ChatBox />}
             </div>
         </div>
     );
