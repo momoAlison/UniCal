@@ -1,0 +1,543 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f6ff;}
+.ds-wrap{display:flex;height:780px;background:#f8f6ff;border-radius:16px;overflow:hidden;border:0.5px solid #e0d8f0;}
+.ds-nav{width:200px;background:#fff;border-right:0.5px solid #e8e4f4;display:flex;flex-direction:column;flex-shrink:0;}
+.ds-nav-header{padding:16px 16px 12px;border-bottom:0.5px solid #f0ecff;}
+.ds-logo{display:flex;align-items:center;gap:8px;}
+.ds-logo-icon{width:24px;height:24px;background:#EEEDFE;border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.ds-logo-text{font-size:13px;font-weight:600;color:#3C3489;}
+.ds-nav-sub{font-size:10px;color:#bbb;margin-top:2px;padding-left:32px;}
+.ds-nav-list{padding:8px 8px;overflow-y:auto;flex:1;}
+.ds-nav-section{font-size:10px;font-weight:600;color:#bbb;letter-spacing:0.08em;text-transform:uppercase;padding:10px 8px 4px;}
+.ds-nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;color:#666;margin-bottom:1px;}
+.ds-nav-item:hover{background:#f3f0fa;color:#534AB7;}
+.ds-nav-item.active{background:#EEEDFE;color:#534AB7;font-weight:500;}
+.ds-nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.ds-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.ds-topbar{padding:14px 24px;border-bottom:0.5px solid #e8e4f4;background:#fff;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.ds-section-title{font-size:16px;font-weight:600;color:#1a1a2e;}
+.ds-section-desc{font-size:12px;color:#999;margin-left:auto;}
+.ds-content{flex:1;overflow-y:auto;padding:20px 24px;}
+.comp-section{display:none;}
+.comp-section.active{display:block;}
+.comp-group{margin-bottom:28px;}
+.comp-label{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.comp-label::after{content:'';flex:1;height:0.5px;background:#f0ecff;}
+.preview-box{background:#fff;border:0.5px solid #e8e4f4;border-radius:12px;padding:20px;position:relative;}
+.preview-box:hover .copy-btn{opacity:1;}
+.copy-btn{position:absolute;top:10px;right:10px;font-size:10px;padding:3px 8px;border-radius:6px;background:#f3f0fa;color:#534AB7;border:0.5px solid #d4c8f8;cursor:pointer;opacity:0;transition:opacity 0.15s;}
+.copy-btn:hover{background:#EEEDFE;}
+.code-peek{background:#f8f6ff;border:0.5px solid #e8e4f4;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:10px;color:#888;font-family:monospace;line-height:1.6;display:none;}
+.preview-box.expanded .code-peek{display:block;}
+.toggle-code{font-size:10px;color:#534AB7;cursor:pointer;margin-top:6px;display:inline-flex;align-items:center;gap:3px;}
+
+/* Typography tokens */
+.typo-row{display:flex;align-items:baseline;gap:16px;padding:8px 0;border-bottom:0.5px solid #f5f3ff;}
+.typo-row:last-child{border-bottom:none;}
+.typo-meta{width:140px;flex-shrink:0;}
+.typo-name{font-size:10px;color:#aaa;font-family:monospace;}
+.typo-spec{font-size:9px;color:#ccc;font-family:monospace;margin-top:1px;}
+.typo-sample{flex:1;}
+.t-h1{font-size:28px;font-weight:700;color:#1a1a2e;letter-spacing:-0.5px;}
+.t-h2{font-size:22px;font-weight:600;color:#1a1a2e;}
+.t-h3{font-size:17px;font-weight:600;color:#3C3489;}
+.t-h4{font-size:14px;font-weight:600;color:#534AB7;}
+.t-body{font-size:14px;color:#444;line-height:1.6;}
+.t-small{font-size:12px;color:#777;line-height:1.5;}
+.t-caption{font-size:10px;color:#aaa;letter-spacing:0.03em;}
+.t-label{font-size:11px;font-weight:600;color:#534AB7;letter-spacing:0.06em;text-transform:uppercase;}
+
+/* Color swatches */
+.swatch-grid{display:flex;gap:8px;flex-wrap:wrap;}
+.swatch-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.swatch-block{width:44px;height:44px;border-radius:10px;border:0.5px solid rgba(0,0,0,0.06);}
+.swatch-hex{font-size:9px;color:#aaa;font-family:monospace;}
+.swatch-name{font-size:9px;color:#aaa;}
+
+/* Calendar styles */
+.mini-cal{width:100%;}
+.cal-row{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px;}
+.cal-cell{text-align:center;font-size:11px;padding:5px 2px;border-radius:6px;color:#555;cursor:pointer;position:relative;}
+.cal-cell:hover{background:#f3f0fa;}
+.cal-cell.today{background:#534AB7;color:#fff;font-weight:600;}
+.cal-cell.has-event::after{content:'';width:4px;height:4px;border-radius:50%;background:#c6e2f1;position:absolute;bottom:2px;left:50%;transform:translateX(-50%);}
+.cal-cell.today.has-event::after{background:#fff;}
+.cal-cell.other{color:#ccc;}
+.cal-header-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px;}
+.cal-daylabel{text-align:center;font-size:9px;color:#bbb;font-weight:600;text-transform:uppercase;}
+.week-cal{display:flex;flex-direction:column;gap:0;}
+.week-header{display:grid;grid-template-columns:44px repeat(5,1fr);border-bottom:0.5px solid #f0ecff;padding-bottom:6px;margin-bottom:4px;}
+.week-day-head{text-align:center;font-size:10px;color:#aaa;}
+.week-day-head .wdn{font-weight:600;font-size:11px;color:#444;}
+.week-day-head .wdd{font-size:18px;font-weight:700;color:#534AB7;}
+.week-day-head.today-col .wdn{color:#534AB7;}
+.week-time-rows{display:flex;flex-direction:column;gap:0;}
+.week-time-row{display:grid;grid-template-columns:44px repeat(5,1fr);min-height:28px;border-bottom:0.5px solid #faf8ff;}
+.week-time-label{font-size:9px;color:#ccc;padding-top:2px;text-align:right;padding-right:8px;}
+.week-event-cell{position:relative;border-left:0.5px solid #f5f2ff;}
+.week-event{border-radius:4px;padding:2px 4px;font-size:9px;margin:1px;line-height:1.3;}
+.we-blue{background:#c6e2f1;color:#185FA5;}
+.we-pink{background:#F4C0D1;color:#993556;}
+.we-purple{background:#CECBF6;color:#3C3489;}
+.we-green{background:#C0DD97;color:#3B6D11;}
+.day-view{display:flex;flex-direction:column;gap:6px;}
+.day-slot{display:flex;gap:10px;align-items:flex-start;min-height:36px;border-bottom:0.5px solid #faf8ff;padding-bottom:6px;}
+.day-time{font-size:10px;color:#ccc;width:36px;flex-shrink:0;padding-top:3px;}
+.day-events{flex:1;display:flex;flex-direction:column;gap:3px;}
+.day-event{border-radius:6px;padding:4px 8px;font-size:11px;}
+.event-new-btn{border:1.5px dashed #d4c8f8;border-radius:6px;padding:4px 8px;font-size:10px;color:#c0b4e8;cursor:pointer;text-align:center;}
+.event-new-btn:hover{background:#f8f5ff;border-color:#a89de0;color:#534AB7;}
+
+/* Chatbox styles */
+.chat-box{border:0.5px solid #e8e4f4;border-radius:12px;overflow:hidden;background:#fff;}
+.chat-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid #f0ecff;background:#fdfcff;}
+.chat-uni-av{width:28px;height:28px;background:#EEEDFE;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chat-name{font-size:12px;font-weight:600;color:#3C3489;}
+.chat-status{font-size:10px;color:#aaa;}
+.online-dot{width:7px;height:7px;border-radius:50%;background:#5DCAA5;margin-left:auto;}
+.chat-msgs{padding:12px;display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;}
+.bmsg-ai{display:flex;gap:6px;align-items:flex-end;}
+.bmsg-av{width:20px;height:20px;background:#EEEDFE;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.bubble-ai{background:#f3f0fa;border-radius:2px 10px 10px 10px;padding:7px 10px;font-size:11px;color:#3C3489;max-width:80%;line-height:1.5;}
+.bubble-user{background:#534AB7;border-radius:10px 2px 10px 10px;padding:7px 10px;font-size:11px;color:#EEEDFE;max-width:80%;margin-left:auto;line-height:1.5;}
+.chat-input-wrap{padding:8px 12px;border-top:0.5px solid #f0ecff;display:flex;gap:6px;align-items:center;}
+.chat-inp{flex:1;background:#f8f5ff;border:0.5px solid #e0d8f0;border-radius:20px;padding:6px 12px;font-size:11px;color:#444;outline:none;}
+.chat-inp::placeholder{color:#bbb;}
+.chat-send{width:26px;height:26px;border-radius:50%;background:#534AB7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.plan-preview{background:#fff;border:0.5px solid #c6e2f1;border-radius:8px;padding:8px 10px;font-size:10px;margin:4px 0 0 26px;}
+.plan-preview-title{font-weight:600;color:#3C3489;margin-bottom:4px;font-size:11px;}
+.plan-item{display:flex;align-items:center;gap:5px;padding:2px 0;color:#555;}
+.plan-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.conflict-pill{background:#FFF0FA;border:0.5px solid #F4C0D1;border-radius:6px;padding:4px 8px;font-size:10px;color:#993556;margin-top:4px;display:flex;align-items:flex-start;gap:5px;}
+.pp-btns{display:flex;gap:6px;margin-top:6px;}
+.pp-btn{flex:1;padding:4px;border-radius:6px;font-size:10px;text-align:center;cursor:pointer;border:0.5px solid;}
+.pp-confirm{background:#534AB7;color:#fff;border-color:#534AB7;}
+.pp-edit{background:#fff;color:#534AB7;border-color:#c6e2f1;}
+
+/* Cards */
+.event-card{border-radius:10px;padding:12px 14px;position:relative;overflow:hidden;}
+.card-fixed{background:#e8f4fb;border-left:3px solid #378ADD;}
+.card-task{background:#edfaf4;border-left:3px solid #5DCAA5;}
+.card-conflict{background:#fff5f9;border-left:3px solid #D4537E;}
+.card-title{font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:2px;}
+.card-time{font-size:11px;color:#888;}
+.card-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;margin-top:5px;}
+.badge-blue{background:#c6e2f1;color:#185FA5;}
+.badge-green{background:#C0DD97;color:#3B6D11;}
+.badge-pink{background:#F4C0D1;color:#993556;}
+.badge-purple{background:#CECBF6;color:#3C3489;}
+.card-actions{display:flex;gap:5px;margin-top:8px;}
+.ca-btn{font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer;border:0.5px solid;}
+.ca-primary{background:#534AB7;color:#fff;border-color:#534AB7;}
+.ca-ghost{background:#fff;color:#534AB7;border-color:#c6e2f1;}
+.ca-danger{background:#fff;color:#D4537E;border-color:#F4C0D1;}
+
+/* Buttons & Forms */
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.ub{padding:7px 16px;border-radius:8px;font-size:12px;cursor:pointer;border:0.5px solid;font-weight:500;}
+.ub-primary{background:#534AB7;color:#fff;border-color:#534AB7;}
+.ub-primary:hover{background:#3C3489;}
+.ub-secondary{background:#EEEDFE;color:#534AB7;border-color:#d4c8f8;}
+.ub-ghost{background:#fff;color:#534AB7;border-color:#d4c8f8;}
+.ub-danger{background:#fff;color:#D4537E;border-color:#F4C0D1;}
+.ub-sm{padding:4px 10px;font-size:11px;border-radius:6px;}
+.ub-lg{padding:10px 22px;font-size:14px;border-radius:10px;}
+.ub-pill{border-radius:20px;}
+.ub-icon{display:inline-flex;align-items:center;gap:5px;}
+.form-field{margin-bottom:10px;}
+.form-label{font-size:11px;font-weight:600;color:#534AB7;margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:0.05em;}
+.form-input{width:100%;padding:8px 12px;border:0.5px solid #d4c8f8;border-radius:8px;font-size:12px;color:#333;outline:none;background:#fff;}
+.form-input:focus{border-color:#534AB7;box-shadow:0 0 0 3px #EEEDFE;}
+.form-select{width:100%;padding:8px 12px;border:0.5px solid #d4c8f8;border-radius:8px;font-size:12px;color:#333;background:#fff;outline:none;}
+.tag-row{display:flex;gap:5px;flex-wrap:wrap;}
+.form-tag{padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:0.5px solid #d4c8f8;color:#534AB7;background:#fff;}
+.form-tag.sel{background:#EEEDFE;border-color:#534AB7;}
+.toggle-wrap{display:flex;align-items:center;gap:8px;}
+.toggle{width:36px;height:20px;border-radius:10px;background:#e0d8f0;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:#534AB7;}
+.toggle-knob{width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left 0.2s;}
+.toggle.on .toggle-knob{left:18px;}
+.toggle-label{font-size:12px;color:#555;}
+
+/* Gamification */
+.badge-card{border-radius:12px;padding:14px;text-align:center;background:#fff;border:0.5px solid #e8e4f4;}
+.badge-icon-wrap{width:56px;height:56px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;}
+.badge-title{font-size:12px;font-weight:600;color:#1a1a2e;margin-bottom:2px;}
+.badge-desc{font-size:10px;color:#aaa;}
+.streak-bar{display:flex;gap:4px;align-items:center;}
+.streak-day{width:32px;height:32px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;gap:1px;}
+.streak-day.done{background:#EEEDFE;color:#534AB7;}
+.streak-day.today-s{background:#534AB7;color:#fff;}
+.streak-day.future{background:#f5f3ff;color:#ccc;}
+.streak-day .s-day{font-weight:600;font-size:10px;}
+.progress-bar{height:8px;border-radius:4px;background:#f0ecff;overflow:hidden;}
+.progress-fill{height:100%;border-radius:4px;background:#534AB7;transition:width 0.4s;}
+.xp-row{display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px;}
+.trophy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+</style>
+
+<h2 style="position:absolute;left:-9999px;">UniCal AI 设计系统组件库 Playground</h2>
+
+<div class="ds-wrap">
+  <div class="ds-nav">
+    <div class="ds-nav-header">
+      <div class="ds-logo">
+        <div class="ds-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 3L13.5 7L12 5.5L10.5 7Z" fill="#534AB7"/><ellipse cx="12" cy="13" rx="6" ry="5" fill="#c6e2f1"/><ellipse cx="8.5" cy="14" rx="2" ry="1.5" fill="#F4C0D1"/><ellipse cx="15.5" cy="14" rx="2" ry="1.5" fill="#F4C0D1"/><circle cx="10.5" cy="12" r="0.9" fill="#534AB7"/><circle cx="13.5" cy="12" r="0.9" fill="#534AB7"/></svg>
+        </div>
+        <span class="ds-logo-text">UniCal DS</span>
+      </div>
+      <div class="ds-nav-sub">Design System v1.0</div>
+    </div>
+    <div class="ds-nav-list">
+      <div class="ds-nav-section">Foundation</div>
+      <div class="ds-nav-item active" onclick="show('typography',this)"><div class="ds-nav-dot" style="background:#534AB7;"></div>Typography</div>
+      <div class="ds-nav-item" onclick="show('colors',this)"><div class="ds-nav-dot" style="background:#c6e2f1;"></div>Colors</div>
+      <div class="ds-nav-section">Components</div>
+      <div class="ds-nav-item" onclick="show('calendar',this)"><div class="ds-nav-dot" style="background:#CECBF6;"></div>Calendar</div>
+      <div class="ds-nav-item" onclick="show('chatbox',this)"><div class="ds-nav-dot" style="background:#F4C0D1;"></div>Chatbox</div>
+      <div class="ds-nav-item" onclick="show('cards',this)"><div class="ds-nav-dot" style="background:#C0DD97;"></div>Cards & Events</div>
+      <div class="ds-nav-item" onclick="show('forms',this)"><div class="ds-nav-dot" style="background:#FAC775;"></div>Buttons & Forms</div>
+      <div class="ds-nav-item" onclick="show('gamification',this)"><div class="ds-nav-dot" style="background:#ED93B1;"></div>Gamification</div>
+    </div>
+  </div>
+
+  <div class="ds-main">
+    <div class="ds-topbar">
+      <div id="top-title" class="ds-section-title">Typography</div>
+      <div class="ds-section-desc" id="top-desc">字体系统 · 6 styles</div>
+    </div>
+    <div class="ds-content">
+
+      <!-- TYPOGRAPHY -->
+      <div class="comp-section active" id="sec-typography">
+        <div class="comp-group">
+          <div class="comp-label">Type Scale</div>
+          <div class="preview-box">
+            <button class="copy-btn" onclick="copyCode('type-code')">复制 CSS</button>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Display / H1</div><div class="typo-spec">28px · 700 · -0.5px</div></div><div class="typo-sample t-h1">管理你的时间</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Heading / H2</div><div class="typo-spec">22px · 600</div></div><div class="typo-sample t-h2">本周计划概览</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Section / H3</div><div class="typo-spec">17px · 600 · brand</div></div><div class="typo-sample t-h3">今日任务</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Subheading / H4</div><div class="typo-spec">14px · 600 · purple</div></div><div class="typo-sample t-h4">专注研究时间</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Body</div><div class="typo-spec">14px · 400 · 1.6lh</div></div><div class="typo-sample t-body">AI 助理已为你安排了最优的时间块，点击确认即可一键入历。</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Small</div><div class="typo-spec">12px · 400 · muted</div></div><div class="typo-sample t-small">周三早晨 9:00 已有会议，已自动调整至下午 5 点。</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Caption</div><div class="typo-spec">10px · 400 · hint</div></div><div class="typo-sample t-caption">上次同步于 2 分钟前 · Google Calendar</div></div>
+            <div class="typo-row"><div class="typo-meta"><div class="typo-name">Label / Tag</div><div class="typo-spec">11px · 600 · uppercase</div></div><div class="typo-sample t-label">固定日程</div></div>
+          </div>
+          <span class="toggle-code" onclick="toggleCode(this)">▸ 查看 CSS token</span>
+          <div class="code-peek" id="type-code">--font-display: 28px/700/-0.5px;
+--font-h2: 22px/600;
+--font-h3: 17px/600; color: #3C3489;
+--font-h4: 14px/600; color: #534AB7;
+--font-body: 14px/400/1.6lh; color: #444;
+--font-small: 12px/400; color: #777;
+--font-caption: 10px/400; color: #aaa;
+--font-label: 11px/600/uppercase; color: #534AB7;</div>
+        </div>
+      </div>
+
+      <!-- COLORS -->
+      <div class="comp-section" id="sec-colors">
+        <div class="comp-group">
+          <div class="comp-label">Brand Palette</div>
+          <div class="preview-box">
+            <div class="swatch-grid">
+              <div class="swatch-item"><div class="swatch-block" style="background:#534AB7;"></div><div class="swatch-hex">#534AB7</div><div class="swatch-name">Primary</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#EEEDFE;"></div><div class="swatch-hex">#EEEDFE</div><div class="swatch-name">Primary Tint</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#3C3489;"></div><div class="swatch-hex">#3C3489</div><div class="swatch-name">Primary Dark</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#c6e2f1;"></div><div class="swatch-hex">#c6e2f1</div><div class="swatch-name">Sky Blue</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#F4C0D1;"></div><div class="swatch-hex">#F4C0D1</div><div class="swatch-name">Petal Pink</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#CECBF6;"></div><div class="swatch-hex">#CECBF6</div><div class="swatch-name">Lavender</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#5DCAA5;"></div><div class="swatch-hex">#5DCAA5</div><div class="swatch-name">Mint</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#FFF0FA;"></div><div class="swatch-hex">#FFF0FA</div><div class="swatch-name">Blush BG</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#f8f6ff;border:0.5px solid #e8e4f4;"></div><div class="swatch-hex">#f8f6ff</div><div class="swatch-name">App BG</div></div>
+              <div class="swatch-item"><div class="swatch-block" style="background:#D4537E;"></div><div class="swatch-hex">#D4537E</div><div class="swatch-name">Conflict</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">Event Type Colors</div>
+          <div class="preview-box">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:4px;height:32px;border-radius:2px;background:#378ADD;"></div><div><div style="font-size:12px;font-weight:600;color:#185FA5;">固定日程 Fixed Event</div><div style="font-size:10px;color:#aaa;">bg: #c6e2f1 · border: #378ADD</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:4px;height:32px;border-radius:2px;background:#5DCAA5;"></div><div><div style="font-size:12px;font-weight:600;color:#085041;">任务 Task</div><div style="font-size:10px;color:#aaa;">bg: #C0DD97 · border: #5DCAA5</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:4px;height:32px;border-radius:2px;background:#D4537E;"></div><div><div style="font-size:12px;font-weight:600;color:#993556;">冲突 Conflict</div><div style="font-size:10px;color:#aaa;">bg: #FFF0FA · border: #D4537E</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:4px;height:32px;border-radius:2px;background:#534AB7;"></div><div><div style="font-size:12px;font-weight:600;color:#3C3489;">AI 规划 AI Planned</div><div style="font-size:10px;color:#aaa;">bg: #CECBF6 · border: #534AB7</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDAR -->
+      <div class="comp-section" id="sec-calendar">
+        <div class="comp-group">
+          <div class="comp-label">月视图 Month View</div>
+          <div class="preview-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <span style="font-size:14px;font-weight:600;color:#3C3489;">2025年 7月</span>
+              <div style="display:flex;gap:4px;">
+                <div style="width:24px;height:24px;border:0.5px solid #e0d8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:#888;">‹</div>
+                <div style="width:24px;height:24px;border:0.5px solid #e0d8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:#888;">›</div>
+              </div>
+            </div>
+            <div class="cal-header-row"><div class="cal-daylabel">日</div><div class="cal-daylabel">一</div><div class="cal-daylabel">二</div><div class="cal-daylabel">三</div><div class="cal-daylabel">四</div><div class="cal-daylabel">五</div><div class="cal-daylabel">六</div></div>
+            <div id="month-grid"></div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">周视图 Week View</div>
+          <div class="preview-box">
+            <div class="week-header">
+              <div></div>
+              <div class="week-day-head"><div class="wdn">周一</div><div class="wdd">14</div></div>
+              <div class="week-day-head today-col"><div class="wdn" style="color:#534AB7;">周二</div><div class="wdd" style="color:#534AB7;">15</div></div>
+              <div class="week-day-head"><div class="wdn">周三</div><div class="wdd">16</div></div>
+              <div class="week-day-head"><div class="wdn">周四</div><div class="wdd">17</div></div>
+              <div class="week-day-head"><div class="wdn">周五</div><div class="wdd">18</div></div>
+            </div>
+            <div class="week-time-rows">
+              <div class="week-time-row"><div class="week-time-label">9:00</div><div class="week-event-cell"><div class="week-event we-blue">团队站会</div></div><div class="week-event-cell"></div><div class="week-event-cell"><div class="week-event we-purple">线上会议</div></div><div class="week-event-cell"></div><div class="week-event-cell"></div></div>
+              <div class="week-time-row"><div class="week-time-label">10:00</div><div class="week-event-cell"><div class="week-event we-pink">竞品分析</div></div><div class="week-event-cell"><div class="week-event we-pink">竞品分析</div></div><div class="week-event-cell"><div class="week-event we-pink">竞品分析</div></div><div class="week-event-cell"></div><div class="week-event-cell"><div class="week-event we-green">晨跑 30min</div></div></div>
+              <div class="week-time-row"><div class="week-time-label">14:00</div><div class="week-event-cell"></div><div class="week-event-cell"><div class="week-event we-purple">AI 规划块</div></div><div class="week-event-cell"></div><div class="week-event-cell"><div class="week-event we-blue">客户会议</div></div><div class="week-event-cell"></div></div>
+              <div class="week-time-row"><div class="week-time-label">17:00</div><div class="week-event-cell"></div><div class="week-event-cell"></div><div class="week-event-cell"><div class="week-event we-green">运动调整</div></div><div class="week-event-cell"></div><div class="week-event-cell"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">日视图 Day View + 新增事件</div>
+          <div class="preview-box">
+            <div style="font-size:13px;font-weight:600;color:#3C3489;margin-bottom:10px;">2025年7月15日 周二</div>
+            <div class="day-view">
+              <div class="day-slot"><div class="day-time">09:00</div><div class="day-events"><div class="day-event we-purple">线上会议 · 60min</div></div></div>
+              <div class="day-slot"><div class="day-time">10:00</div><div class="day-events"><div class="day-event we-pink">竞品分析 · 研究阶段</div></div></div>
+              <div class="day-slot"><div class="day-time">14:00</div><div class="day-events"><div class="day-event we-purple">AI 规划时间块</div></div></div>
+              <div class="day-slot"><div class="day-time">16:00</div><div class="day-events"><div class="event-new-btn" onclick="sendPrompt('帮我在今天下午4点新增一个任务')">+ 告诉 Uni 新增事件 ↗</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHATBOX -->
+      <div class="comp-section" id="sec-chatbox">
+        <div class="comp-group">
+          <div class="comp-label">标准对话框 Standard Chatbox</div>
+          <div class="chat-box">
+            <div class="chat-head">
+              <div class="chat-uni-av"><svg viewBox="0 0 20 20" fill="none" width="14" height="14"><path d="M10 2L11.5 6L10 4.5L8.5 6Z" fill="#534AB7"/><ellipse cx="10" cy="12" rx="5" ry="4" fill="#c6e2f1"/><ellipse cx="7" cy="13" rx="1.8" ry="1.3" fill="#F4C0D1"/><ellipse cx="13" cy="13" rx="1.8" ry="1.3" fill="#F4C0D1"/><circle cx="8.5" cy="11.2" r="0.8" fill="#534AB7"/><circle cx="11.5" cy="11.2" r="0.8" fill="#534AB7"/></svg></div>
+              <div><div class="chat-name">Uni</div><div class="chat-status">你的 AI 助理</div></div>
+              <div class="online-dot"></div>
+            </div>
+            <div class="chat-msgs">
+              <div class="bmsg-ai"><div class="bmsg-av"><svg viewBox="0 0 14 14" fill="none" width="10" height="10"><ellipse cx="7" cy="8" rx="4" ry="3.5" fill="#c6e2f1"/><path d="M7 2L8 5L7 3.8L6 5Z" fill="#534AB7"/></svg></div><div class="bubble-ai">早上好！今天有 2 个任务需要完成，要帮你规划时间吗？</div></div>
+              <div style="text-align:right;"><div class="bubble-user">帮我安排下午的专注时间，大概 2 小时。</div></div>
+              <div class="bmsg-ai"><div class="bmsg-av"><svg viewBox="0 0 14 14" fill="none" width="10" height="10"><ellipse cx="7" cy="8" rx="4" ry="3.5" fill="#c6e2f1"/><path d="M7 2L8 5L7 3.8L6 5Z" fill="#534AB7"/></svg></div>
+                <div>
+                  <div class="bubble-ai">好的！我找到了下午 14:00–16:00 的空档，已生成计划草稿：</div>
+                  <div class="plan-preview">
+                    <div class="plan-preview-title">专注时间块 · 草稿</div>
+                    <div class="plan-item"><div class="plan-dot" style="background:#534AB7;"></div>14:00–15:00 深度工作 · 竞品分析</div>
+                    <div class="plan-item"><div class="plan-dot" style="background:#5DCAA5;"></div>15:00–16:00 整理笔记</div>
+                    <div class="pp-btns"><div class="pp-btn pp-confirm" onclick="sendPrompt('确认一键入历！')">一键入历 ↗</div><div class="pp-btn pp-edit">调整</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-wrap">
+              <input class="chat-inp" placeholder="有任何计划，先跟我聊聊…" />
+              <button class="chat-send"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 5h8M6 2l3 3-3 3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">冲突提示变体 Conflict State</div>
+          <div class="chat-box">
+            <div class="chat-msgs" style="padding:12px;">
+              <div class="bmsg-ai"><div class="bmsg-av"><svg viewBox="0 0 14 14" fill="none" width="10" height="10"><ellipse cx="7" cy="8" rx="4" ry="3.5" fill="#c6e2f1"/><path d="M7 2L8 5L7 3.8L6 5Z" fill="#534AB7"/></svg></div>
+                <div>
+                  <div class="bubble-ai">发现日程冲突，已为你准备替代方案：</div>
+                  <div class="plan-preview">
+                    <div class="conflict-pill"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1L9.5 9H0.5L5 1Z" fill="#F4C0D1" stroke="#D4537E" stroke-width="0.8"/><text x="4.2" y="7.5" font-size="5" fill="#993556">!</text></svg>周三 9:00 与线上会议冲突</div>
+                    <div class="plan-item" style="margin-top:5px;"><div class="plan-dot" style="background:#5DCAA5;"></div>已自动调整至下午 17:00</div>
+                    <div class="pp-btns"><div class="pp-btn pp-confirm">接受建议 ↗</div><div class="pp-btn pp-edit">手动处理</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARDS -->
+      <div class="comp-section" id="sec-cards">
+        <div class="comp-group">
+          <div class="comp-label">事件卡片 Event Cards</div>
+          <div class="preview-box">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="event-card card-fixed">
+                <div class="card-title">斯德哥尔摩旅行</div>
+                <div class="card-time">周二 7月8日 – 周四 7月10日 · 全天</div>
+                <div class="card-badge badge-blue">固定日程</div>
+                <div class="card-actions"><div class="ca-btn ca-primary">查看详情</div><div class="ca-btn ca-ghost">编辑</div></div>
+              </div>
+              <div class="event-card card-task">
+                <div class="card-title">每日晨跑 30 min</div>
+                <div class="card-time">周二–周四 · 07:00–07:30</div>
+                <div class="card-badge badge-green">任务</div>
+                <div style="margin-top:6px;"><div style="font-size:10px;color:#555;margin-bottom:3px;">完成进度</div><div class="progress-bar"><div class="progress-fill" style="width:66%;background:#5DCAA5;"></div></div></div>
+                <div class="card-actions"><div class="ca-btn ca-primary" style="background:#5DCAA5;border-color:#5DCAA5;">打卡完成</div><div class="ca-btn ca-ghost">跳过</div></div>
+              </div>
+              <div class="event-card card-conflict">
+                <div class="card-title">竞品分析 · 专注时间</div>
+                <div class="card-time">周四 14:00–16:00 · 与会议重叠</div>
+                <div class="card-badge badge-pink">冲突</div>
+                <div class="card-actions"><div class="ca-btn ca-primary" style="background:#D4537E;border-color:#D4537E;" onclick="sendPrompt('帮我自动重排竞品分析的时间')">AI 重排 ↗</div><div class="ca-btn ca-ghost">保留冲突</div><div class="ca-btn ca-danger">删除</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORMS -->
+      <div class="comp-section" id="sec-forms">
+        <div class="comp-group">
+          <div class="comp-label">按钮变体 Button Variants</div>
+          <div class="preview-box">
+            <div class="btn-row" style="margin-bottom:10px;">
+              <button class="ub ub-primary">一键入历</button>
+              <button class="ub ub-secondary">查看草稿</button>
+              <button class="ub ub-ghost">取消</button>
+              <button class="ub ub-danger">删除事件</button>
+            </div>
+            <div class="btn-row" style="margin-bottom:10px;">
+              <button class="ub ub-sm ub-primary">小号</button>
+              <button class="ub ub-primary">默认</button>
+              <button class="ub ub-lg ub-primary">大号</button>
+            </div>
+            <div class="btn-row">
+              <button class="ub ub-primary ub-pill ub-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#fff" stroke-width="1.1"/><path d="M6 3.5v5M3.5 6h5" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/></svg>新增事件</button>
+              <button class="ub ub-secondary ub-pill">AI 规划</button>
+              <button class="ub ub-ghost ub-pill">导入日历</button>
+            </div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">表单字段 Form Fields</div>
+          <div class="preview-box">
+            <div class="form-field"><label class="form-label">事件名称</label><input class="form-input" placeholder="例：斯德哥尔摩旅行" /></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-field"><label class="form-label">开始时间</label><input class="form-input" type="time" value="09:00" /></div>
+              <div class="form-field"><label class="form-label">结束时间</label><input class="form-input" type="time" value="10:00" /></div>
+            </div>
+            <div class="form-field"><label class="form-label">类型</label>
+              <div class="tag-row" id="type-tags">
+                <div class="form-tag sel" onclick="toggleTag(this)">固定日程</div>
+                <div class="form-tag" onclick="toggleTag(this)">任务</div>
+                <div class="form-tag" onclick="toggleTag(this)">AI 规划</div>
+                <div class="form-tag" onclick="toggleTag(this)">旅行</div>
+              </div>
+            </div>
+            <div class="form-field"><label class="form-label">重复</label><select class="form-select"><option>不重复</option><option>每天</option><option>每周</option><option>每月</option></select></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div class="toggle-wrap"><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div><span class="toggle-label">Google Calendar 同步</span></div>
+              <div class="toggle-wrap"><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div><span class="toggle-label">开启冲突检测</span></div>
+              <div class="toggle-wrap"><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div><span class="toggle-label">AI 自动重排</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GAMIFICATION -->
+      <div class="comp-section" id="sec-gamification">
+        <div class="comp-group">
+          <div class="comp-label">连胜追踪 Streak Tracker</div>
+          <div class="preview-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <div><div style="font-size:14px;font-weight:600;color:#3C3489;">连续打卡 7 天</div><div style="font-size:11px;color:#aaa;">明天继续，点亮第8天的光芒</div></div>
+              <div style="font-size:24px;font-weight:700;color:#534AB7;">🔥 7</div>
+            </div>
+            <div class="streak-bar">
+              <div class="streak-day done"><div class="s-day">一</div><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="streak-day done"><div class="s-day">二</div><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="streak-day done"><div class="s-day">三</div><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="streak-day done"><div class="s-day">四</div><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="streak-day done"><div class="s-day">五</div><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="streak-day done"><div class="s-day">六</div><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3 5.5L6.5 2" stroke="#534AB7" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+              <div class="streak-day today-s"><div class="s-day">日</div><div style="font-size:7px;">今</div></div>
+              <div class="streak-day future"><div class="s-day">一</div></div>
+              <div class="streak-day future"><div class="s-day">二</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">经验值 XP Progress</div>
+          <div class="preview-box">
+            <div class="xp-row"><span style="color:#3C3489;font-weight:600;">Lv.4 · 时间骑士</span><span>1240 / 2000 XP</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:62%;"></div></div>
+            <div style="font-size:10px;color:#aaa;margin-top:4px;">再完成 760 XP 解锁 Lv.5 · 独角兽骑士</div>
+          </div>
+        </div>
+        <div class="comp-group">
+          <div class="comp-label">奖杯 & 徽章 Trophies</div>
+          <div class="preview-box">
+            <div class="trophy-grid">
+              <div class="badge-card"><div class="badge-icon-wrap" style="background:#EEEDFE;"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 3L16 9L14 7L12 9Z" fill="#534AB7"/><ellipse cx="14" cy="17" rx="8" ry="7" fill="#c6e2f1"/><ellipse cx="10" cy="18.5" rx="3" ry="2.2" fill="#F4C0D1"/><ellipse cx="18" cy="18.5" rx="3" ry="2.2" fill="#F4C0D1"/><circle cx="12" cy="16" r="1.2" fill="#534AB7"/><circle cx="16" cy="16" r="1.2" fill="#534AB7"/><path d="M12 19.5Q14 21 16 19.5" stroke="#534AB7" stroke-width="1" fill="none" stroke-linecap="round"/></svg></div><div class="badge-title">旅行自律者</div><div class="badge-desc">旅途中完成7天打卡</div></div>
+              <div class="badge-card"><div class="badge-icon-wrap" style="background:#E1F5EE;"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 5L16 11L21 9L17 13L22 15L16 14L14 20L12 14L6 15L11 13L7 9L12 11Z" fill="#5DCAA5"/></svg></div><div class="badge-title">专注之星</div><div class="badge-desc">连续专注 100 小时</div></div>
+              <div class="badge-card" style="border:0.5px dashed #e0d8f0;background:#fafafa;"><div class="badge-icon-wrap" style="background:#f5f3ff;"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="8" y="8" width="12" height="12" rx="6" stroke="#e0d8f0" stroke-width="1.5" stroke-dasharray="2 2"/><text x="11" y="19" font-size="10" fill="#ccc">?</text></svg></div><div class="badge-title" style="color:#ccc;">未解锁</div><div class="badge-desc">连续早起 30 天</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const sections={
+  typography:{title:'Typography',desc:'字体系统 · 8 styles'},
+  colors:{title:'Colors',desc:'品牌色板 · 10 tokens'},
+  calendar:{title:'Calendar',desc:'视图组件 · 月 / 周 / 日'},
+  chatbox:{title:'Chatbox',desc:'对话框 · 2 variants'},
+  cards:{title:'Cards & Events',desc:'事件卡片 · 3 types'},
+  forms:{title:'Buttons & Forms',desc:'按钮 & 表单 · 完整套件'},
+  gamification:{title:'Gamification',desc:'游戏化 · Streak / XP / Trophy'},
+};
+
+function show(id,el){
+  document.querySelectorAll('.comp-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ds-nav-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('top-title').textContent=sections[id].title;
+  document.getElementById('top-desc').textContent=sections[id].desc;
+}
+
+function toggleTag(el){el.classList.toggle('sel');}
+
+function toggleCode(btn){
+  const box=btn.previousElementSibling;
+  box.classList.toggle('expanded');
+  btn.textContent=box.classList.contains('expanded')?'▾ 收起 CSS token':'▸ 查看 CSS token';
+}
+
+function copyCode(id){
+  const el=document.getElementById(id);
+  if(el) navigator.clipboard.writeText(el.textContent).then(()=>{
+    event.target.textContent='已复制!';setTimeout(()=>event.target.textContent='复制 CSS',1500);
+  });
+}
+
+const monthGrid=document.getElementById('month-grid');
+const events=[3,7,8,9,10,14,15,16,21,28];
+let html='';
+[29,30].forEach(n=>{html+=`<div class="cal-row">`});
+const rows=[];let row=[];
+[30,31].forEach(n=>row.push({n,other:true}));
+for(let i=1;i<=31;i++) row.push({n:i,other:false,today:i===15,ev:events.includes(i)});
+[1,2,3,4].forEach(n=>row.push({n,other:true}));
+for(let i=0;i<row.length;i+=7) rows.push(row.slice(i,i+7));
+html=rows.map(r=>`<div class="cal-row">${r.map(d=>`<div class="cal-cell${d.other?' other':''}${d.today?' today':''}${d.ev?' has-event':''}">${d.n}</div>`).join('')}</div>`).join('');
+monthGrid.innerHTML=html;
+</script>
