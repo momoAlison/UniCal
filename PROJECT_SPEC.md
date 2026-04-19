@@ -145,3 +145,78 @@ Development must proceed strictly through these 4 phases. Each phase requires te
     * Refine the AI's prompts to enable overlapping time analysis (Conflict Resolution).
     * Implement genuine two-way synchronization via the Google Calendar API.
     * Integrate the Streak counting logic and basic Framer Motion unicorn UI feedback.
+
+## 🚨 Core Specification: Timezone & Date Handling
+
+Handling dates and times incorrectly is the most common source of bugs in calendar applications. To ensure accuracy across the frontend, the AI model, and the database, all time-related data must adhere to the following strict guidelines.
+
+### 1. The Absolute Standard: ISO 8601 & UTC Only
+Whether storing data in the database or passing JSON payloads to the AI model, **always use the ISO 8601 format and enforce UTC (Zero Timezone) at the backend and database levels.** Time data should only be converted to the user's local timezone on the frontend (client-side) immediately before rendering the UI.
+
+* **ISO 8601 Example:** `2026-04-18T14:47:56Z`
+    *(The trailing `Z` stands for Zulu time, indicating UTC).*
+
+### 2. JSON Schema for AI Interaction (Tool Calling)
+When utilizing the Vercel AI SDK's Tool Calling feature, define a flat, explicit JSON Schema for the AI to follow. Use the following structure for passing and receiving time data:
+
+```json
+{
+  "events": [
+    {
+      "title": "Flight to Stockholm",
+      "start_time": "2026-04-21T08:00:00Z", 
+      "end_time": "2026-04-21T10:30:00Z",
+      "timezone": "Europe/Stockholm", // Record the local timezone of the event
+      "is_fixed": true
+    },
+    {
+      "title": "Python Study (AI Task)",
+      "start_time": "2026-04-21T14:00:00Z",
+      "end_time": "2026-04-21T16:00:00Z",
+      "timezone": "Europe/Stockholm",
+      "is_fixed": false
+    }
+  ]
+}
+```
+**Crucial Rule:** Instruct the AI to output only precise `start_time` and `end_time` values. **Do not** ask it to output "duration". Forcing the AI to perform secondary time calculations drastically increases the probability of logical hallucinations.
+
+### 3. Mandatory AI Context: System Prompt Injection
+Large Language Models have no inherent concept of current time. If a user says "schedule this for tomorrow afternoon," the AI cannot resolve "tomorrow" without external context.
+
+In your `/api/chat` route, you **must** dynamically inject the exact current time and the user's timezone into the System Prompt:
+
+```typescript
+// Example Implementation
+const currentUserTimezone = "Europe/Stockholm"; 
+const currentDateTime = new Date().toISOString(); // e.g., "2026-04-18T14:47:56Z"
+const currentDayOfWeek = "Saturday";
+
+const systemPrompt = `
+You are an elite AI calendar assistant named UniCal.
+Current system context:
+- Current UTC Time: ${currentDateTime}
+- Current Day of Week: ${currentDayOfWeek}
+- User's Local Timezone: ${currentUserTimezone}
+
+When processing scheduling requests, strictly base your calculations on this timezone and current time.
+All time parameters passed into Tool Calls MUST be formatted as standard ISO 8601 UTC strings ending in 'Z'.
+`;
+```
+
+### 4. Database Schema (Supabase / PostgreSQL)
+When defining the `events` table in Supabase, any time-related column must be set to `timestamp with time zone` (shorthand: `timestamptz`), not a standard `timestamp`.
+
+```sql
+-- Database Column Definition
+start_time timestamptz NOT NULL,
+end_time timestamptz NOT NULL,
+```
+By enforcing this schema, when the Next.js backend writes an ISO 8601 string containing `Z` (UTC) to the database, PostgreSQL will automatically parse and store it correctly, eliminating cross-timezone offset errors.
+
+### Summary: The Architecture Data Flow
+1.  **Frontend (User Input):** User says, "Meeting tomorrow at 2 PM."
+2.  **Next.js (API Route):** Captures the current UTC time and the user's local timezone, injects them into the System Prompt, and sends the payload to Claude.
+3.  **Claude (AI Model):** Calculates exactly what "tomorrow at 2 PM" is in UTC, formats it as an ISO 8601 string, and returns it via a JSON Tool Call.
+4.  **Supabase (Database):** Receives the UTC string and securely stores it in a `timestamptz` column.
+5.  **Frontend (UI Render):** Fetches the UTC time from the database and uses the browser's native Date API (or a library like date-fns) to format and display it in the user's local time on the calendar grid.
