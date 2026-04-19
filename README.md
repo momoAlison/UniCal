@@ -6,6 +6,8 @@
 
 ## 📖 Overview
 
+https://github.com/user-attachments/assets/7bdd8e47-46f8-4b81-a937-1d0731c9f34f
+
 **UniCal AI** reimagines how we manage our time. Instead of the traditional, tedious process of manually filling out calendar forms, UniCal introduces a **"Chat-First"** paradigm. Powered by state-of-the-art LLMs, your personal Unicorn AI assistant listens to your goals, breaks them down into actionable tasks, and intelligently schedules them into your free time—while automatically avoiding conflicts with your existing meetings.
 
 Whether you are planning a 3-day trip, dedicating 10 hours to a research report, or just trying to maintain a daily morning run, UniCal AI makes scheduling feel like a conversation with a smart friend.
