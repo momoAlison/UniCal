@@ -31,6 +31,80 @@ function TypingIndicator() {
 }
 
 /**
+ * ThinkingBlock — renders the AI's <thinking>...</thinking> content.
+ * While streaming (content is partial/changing), shows a scrolling marquee of the latest text.
+ * After streaming completes, collapses to a single-line pill (expandable on click).
+ */
+function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
+    const [expanded, setExpanded] = useState(false);
+
+    if (isStreaming) {
+        // During streaming: show a compact 1-line pill with the last ~60 chars of content scrolling
+        const preview = content.length > 60 ? "…" + content.slice(-60) : content;
+        return (
+            <div style={{
+                padding: "3px 10px",
+                borderRadius: "10px",
+                background: "rgba(124,111,205,0.06)",
+                border: "1px solid rgba(124,111,205,0.15)",
+                fontSize: "10px",
+                fontWeight: 500,
+                fontStyle: "italic",
+                color: "var(--muted)",
+                lineHeight: 1.5,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                maxWidth: "100%",
+                opacity: 0.8,
+            }}>
+                <span style={{ marginRight: "4px" }}>🧠</span>
+                {preview}
+            </div>
+        );
+    }
+
+    // After streaming: collapsed pill, expandable on click
+    return (
+        <div
+            onClick={() => setExpanded(e => !e)}
+            style={{
+                cursor: "pointer",
+                padding: expanded ? "6px 10px" : "3px 10px",
+                borderRadius: "10px",
+                background: "rgba(124,111,205,0.06)",
+                border: "1px solid rgba(124,111,205,0.15)",
+                fontSize: "10px",
+                fontWeight: 500,
+                fontStyle: "italic",
+                color: "var(--muted)",
+                lineHeight: 1.5,
+                userSelect: "none",
+                transition: "padding .15s",
+                overflow: expanded ? "visible" : "hidden",
+                whiteSpace: expanded ? "normal" : "nowrap",
+                textOverflow: expanded ? "clip" : "ellipsis",
+            }}
+            title={expanded ? "Click to collapse" : "Click to expand thinking"}
+        >
+            {expanded ? (
+                <>
+                    <span style={{ opacity: 0.6, marginRight: "4px" }}>🧠</span>
+                    {content}
+                    <span style={{ marginLeft: "6px", opacity: 0.5, fontSize: "9px" }}>▲ collapse</span>
+                </>
+            ) : (
+                <span style={{ display: "flex", alignItems: "center", gap: "4px", opacity: 0.7 }}>
+                    <span>🧠</span>
+                    <span>Thinking...</span>
+                    <span style={{ opacity: 0.5, fontSize: "9px", marginLeft: "2px" }}>▼</span>
+                </span>
+            )}
+        </div>
+    );
+}
+
+/**
  * Group ALL non-fixed AI events into a SINGLE goal.
  * Each event becomes one task under that goal.
  * The goal name is inferred from the shared category or the first event title.
@@ -88,12 +162,46 @@ function buildGoalsFromEvents(planEvents: PlanEvent[]): Goal[] {
     }];
 }
 
+// ─── Conflict detection ───────────────────────────────────────────────────────
+
+interface ConflictInfo {
+    newEvent: PlanEvent;
+    existingTitle: string;
+    existingStart: string;
+    existingEnd: string;
+}
+
+function detectConflicts(newEvents: PlanEvent[], existingEvents: { isoDate: string; isoEnd?: string; text: string }[]): ConflictInfo[] {
+    const conflicts: ConflictInfo[] = [];
+    for (const newEv of newEvents) {
+        const newStart = new Date(newEv.start_time).getTime();
+        const newEnd = new Date(newEv.end_time).getTime();
+        for (const ex of existingEvents) {
+            if (!ex.isoEnd) continue;
+            const exStart = new Date(ex.isoDate).getTime();
+            const exEnd = new Date(ex.isoEnd).getTime();
+            const GRACE_MS = 5 * 60_000;
+            if (newStart < exEnd - GRACE_MS && newEnd > exStart + GRACE_MS) {
+                conflicts.push({
+                    newEvent: newEv,
+                    existingTitle: ex.text,
+                    existingStart: ex.isoDate,
+                    existingEnd: ex.isoEnd,
+                });
+            }
+        }
+    }
+    return conflicts;
+}
+
 function PlanCard({ events }: { events: PlanEvent[] }) {
     const [phase, setPhase] = useState<"idle" | "previewing" | "confirmed">("idle");
     const [previewIds, setPreviewIds] = useState<string[]>([]);
-    const { addEvents, confirmEvents, removeEvents, setViewMonth, upsertGoals } = useApp();
+    const { addEvents, confirmEvents, removeEvents, setViewMonth, upsertGoals, events: existingEvents } = useApp();
 
-    /** Build CalEvent objects from the AI plan */
+    const existingWithEnd = existingEvents.filter(e => e.isoEnd && !previewIds.includes(e.id));
+    const conflicts = detectConflicts(events, existingWithEnd);
+
     const buildCalEvents = (status: "preview" | "confirmed") =>
         events.map(ev => {
             const d = new Date(ev.start_time);
@@ -118,9 +226,7 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
     };
 
     const handlePreview = () => {
-        // Remove any existing preview from this card first
         if (previewIds.length > 0) removeEvents(previewIds);
-
         const calEvs = buildCalEvents("preview");
         addEvents(calEvs);
         const ids = calEvs.map(e => e.id);
@@ -131,22 +237,18 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
 
     const handleAddToCalendar = () => {
         if (phase === "previewing" && previewIds.length > 0) {
-            // Upgrade existing preview events to confirmed
             confirmEvents(previewIds);
         } else {
-            // Direct add (no preview step)
             const calEvs = buildCalEvents("confirmed");
             addEvents(calEvs);
             navigateToFirst(calEvs);
         }
 
-        // Auto-detect goals from AI events and upsert into store
         const newGoals = buildGoalsFromEvents(events);
         if (newGoals.length > 0) {
             upsertGoals(newGoals);
         }
 
-        // Persist to Supabase (fire-and-forget; gracefully handles unauthenticated users)
         const payload = events.map(ev => ({
             title: ev.title,
             start_time: ev.start_time,
@@ -163,7 +265,6 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
             .then(async res => {
                 const json = await res.json();
                 if (!res.ok) {
-                    // 401 = not logged in — silently skip DB write
                     if (res.status !== 401) {
                         console.warn("[UniCal] Supabase insert failed:", json.error);
                     }
@@ -198,7 +299,6 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
         setPhase("idle");
     };
 
-    // Format UTC ISO string to local time for display
     const formatLocal = (iso: string, tz: string) => {
         try {
             return new Date(iso).toLocaleString("en-US", {
@@ -227,32 +327,47 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
                 📅 Proposed Plan
             </div>
 
-            {events.map((ev, i) => (
-                <div key={i} style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "7px",
-                    marginBottom: "7px",
-                    fontWeight: 700,
-                    color: "var(--text)",
-                    fontSize: "12px",
-                }}>
-                    <div style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        background: ev.is_fixed ? "#7c6fcd" : "#4bbfa8",
-                        flexShrink: 0,
-                        marginTop: "3px",
-                    }} />
-                    <div>
-                        <div>{ev.title}</div>
-                        <div style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 600, marginTop: "2px" }}>
-                            {formatLocal(ev.start_time, ev.timezone)} → {formatLocal(ev.end_time, ev.timezone)}
+            {events.map((ev, i) => {
+                const evConflicts = conflicts.filter(c => c.newEvent === ev);
+                return (
+                    <div key={i} style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "7px",
+                        marginBottom: "7px",
+                        fontWeight: 700,
+                        color: "var(--text)",
+                        fontSize: "12px",
+                    }}>
+                        <div style={{
+                            width: "8px",
+                            height: "8px",
+                            borderRadius: "50%",
+                            background: evConflicts.length > 0 ? "#f0a653" : ev.is_fixed ? "#7c6fcd" : "#4bbfa8",
+                            flexShrink: 0,
+                            marginTop: "3px",
+                        }} />
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                <span>{ev.title}</span>
+                                {evConflicts.length > 0 && (
+                                    <span style={{ fontSize: "9px", background: "#fef3e2", color: "#7a4508", border: "1px solid #f0c670", borderRadius: "4px", padding: "1px 5px", fontWeight: 800 }}>
+                                        ⚠ conflict
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 600, marginTop: "2px" }}>
+                                {formatLocal(ev.start_time, ev.timezone)} → {formatLocal(ev.end_time, ev.timezone)}
+                            </div>
+                            {evConflicts.map((c, ci) => (
+                                <div key={ci} style={{ fontSize: "10px", color: "#7a4508", fontWeight: 700, marginTop: "3px", background: "#fef3e2", borderRadius: "6px", padding: "3px 7px", border: "1px solid #f0c670" }}>
+                                    ⚠ Overlaps with &quot;{c.existingTitle}&quot; ({formatLocal(c.existingStart, ev.timezone)} – {formatLocal(c.existingEnd, ev.timezone)})
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
 
             {phase === "confirmed" ? (
                 <div style={{
@@ -271,7 +386,6 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
                     ✅ Added to calendar!
                 </div>
             ) : phase === "previewing" ? (
-                /* Previewing: show Confirm + Cancel */
                 <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
                     <button
                         onClick={handleAddToCalendar}
@@ -311,7 +425,6 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
                     </button>
                 </div>
             ) : (
-                /* Idle: show Preview + Add directly */
                 <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
                     <button
                         onClick={handlePreview}
@@ -388,25 +501,68 @@ function MessageBubble({ message }: { message: UIMessage }) {
                 if (part.type === "text") {
                     const textPart = part as { type: "text"; text: string };
                     if (!textPart.text) return null;
+
+                    // Split out <thinking>...</thinking> blocks and render them separately.
+                    // Also handle the case where streaming is mid-tag (no closing </thinking> yet).
+                    const rawText = textPart.text;
+                    const segments: Array<{ type: "thinking" | "thinking-streaming" | "normal"; content: string }> = [];
+                    let lastIndex = 0;
+                    let match: RegExpExecArray | null;
+                    const closedThinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/gi;
+                    while ((match = closedThinkingRegex.exec(rawText)) !== null) {
+                        if (match.index > lastIndex) {
+                            const before = rawText.slice(lastIndex, match.index).trim();
+                            if (before) segments.push({ type: "normal", content: before });
+                        }
+                        segments.push({ type: "thinking", content: match[1].trim() });
+                        lastIndex = match.index + match[0].length;
+                    }
+                    // Check for an unclosed <thinking> tag (still streaming)
+                    const openTagIdx = rawText.indexOf("<thinking>", lastIndex);
+                    if (openTagIdx !== -1) {
+                        const before = rawText.slice(lastIndex, openTagIdx).trim();
+                        if (before) segments.push({ type: "normal", content: before });
+                        const streamingContent = rawText.slice(openTagIdx + "<thinking>".length);
+                        segments.push({ type: "thinking-streaming", content: streamingContent });
+                        lastIndex = rawText.length;
+                    }
+                    if (lastIndex < rawText.length) {
+                        const tail = rawText.slice(lastIndex).trim();
+                        if (tail) segments.push({ type: "normal", content: tail });
+                    }
+                    if (segments.length === 0) segments.push({ type: "normal", content: rawText });
+
                     return (
-                        <div key={i} style={{
-                            padding: "10px 13px",
-                            borderRadius: "16px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            lineHeight: 1.55,
-                            background: "var(--bg)",
-                            color: "var(--text)",
-                            borderBottomLeftRadius: "4px",
-                            border: "1px solid var(--border)",
-                        }}>
-                            {textPart.text}
+                        <div key={i} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {segments.map((seg, si) => {
+                                if (seg.type === "thinking") {
+                                    return <ThinkingBlock key={si} content={seg.content} isStreaming={false} />;
+                                }
+                                if (seg.type === "thinking-streaming") {
+                                    return <ThinkingBlock key={si} content={seg.content} isStreaming={true} />;
+                                }
+                                if (!seg.content) return null;
+                                return (
+                                    <div key={si} style={{
+                                        padding: "10px 13px",
+                                        borderRadius: "16px",
+                                        fontSize: "12px",
+                                        fontWeight: 600,
+                                        lineHeight: 1.55,
+                                        background: "var(--bg)",
+                                        color: "var(--text)",
+                                        borderBottomLeftRadius: "4px",
+                                        border: "1px solid var(--border)",
+                                    }}>
+                                        {seg.content}
+                                    </div>
+                                );
+                            })}
                         </div>
                     );
                 }
 
                 // Tool invocation — check for create_plan
-                // Use unknown cast first to satisfy TS strict overlap check
                 const anyPart = part as unknown as {
                     type: string;
                     state: string;
@@ -420,7 +576,6 @@ function MessageBubble({ message }: { message: UIMessage }) {
                     ) {
                         return <PlanCard key={i} events={anyPart.input.events} />;
                     }
-                    // Still streaming input
                     return (
                         <div key={i} style={{
                             borderRadius: "16px",
@@ -442,9 +597,21 @@ function MessageBubble({ message }: { message: UIMessage }) {
 // ─── Main ChatBox ─────────────────────────────────────────────────────────────
 
 export default function ChatBox() {
-    useApp(); // keep store connected
+    const { events: existingEvents } = useApp();
     const [inputValue, setInputValue] = useState("");
     const msgsEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Listen for "unical:focus-chat" events dispatched by CalendarView when conflicts are detected
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ prefill?: string }>).detail;
+            if (detail?.prefill) setInputValue(detail.prefill);
+            inputRef.current?.focus();
+        };
+        window.addEventListener("unical:focus-chat", handler);
+        return () => window.removeEventListener("unical:focus-chat", handler);
+    }, []);
 
     // Detect user's IANA timezone for System Prompt injection (Rule 3)
     const userTimezone =
@@ -452,13 +619,40 @@ export default function ChatBox() {
             ? Intl.DateTimeFormat().resolvedOptions().timeZone
             : "UTC";
 
-    // Use DefaultChatTransport with body injection for timezone
-    const { messages, sendMessage, status } = useChat({
+    // Build a compact list of existing events to send to the AI for conflict avoidance.
+    // Include ALL events with an end time (Google Calendar synced + previously confirmed AI events).
+    // Exclude preview events (status === "preview") since they haven't been confirmed yet.
+    const existingEventsForAI = existingEvents
+        .filter(e => e.isoEnd && e.status !== "preview")
+        .map(e => ({ title: e.text, start: e.isoDate, end: e.isoEnd! }));
+
+    // Use DefaultChatTransport with body injection for timezone + existing events.
+    const { messages, sendMessage: _sendMessage, status } = useChat({
         transport: new DefaultChatTransport({
             api: "/api/chat",
             body: { timezone: userTimezone },
         }),
     });
+
+    // Wrap sendMessage to always inject the latest existingEventsForAI at send time.
+    // Only send events within the next 14 days to keep the context focused and reduce noise.
+    const sendMessage = (opts: Parameters<typeof _sendMessage>[0]) => {
+        const now = Date.now();
+        const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+        const latestEvents = existingEvents
+            .filter(e => {
+                if (!e.isoEnd || e.status === "preview") return false;
+                const start = new Date(e.isoDate).getTime();
+                return start >= now - 60 * 60 * 1000 && start <= now + fourteenDaysMs;
+            })
+            .map(e => ({ title: e.text, start: e.isoDate, end: e.isoEnd! }));
+        console.log(`%c[UniCal] Sending ${latestEvents.length} existing events to AI (next 14 days)`, "color:#7c6fcd;font-weight:bold", latestEvents.map(e => `${e.title} @ ${e.start}`));
+        return _sendMessage(opts, { body: { timezone: userTimezone, existingEvents: latestEvents } });
+    };
+
+    // suppress unused warning
+    void existingEventsForAI;
+    void genId;
 
     const isLoading = status === "streaming" || status === "submitted";
 
@@ -498,7 +692,6 @@ export default function ChatBox() {
 
             {/* Messages */}
             <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                {/* Welcome message when no messages yet */}
                 {messages.length === 0 && (
                     <div style={{
                         padding: "10px 13px",
@@ -520,7 +713,6 @@ export default function ChatBox() {
                     <MessageBubble key={msg.id} message={msg} />
                 ))}
 
-                {/* Typing indicator while waiting for first token */}
                 {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
                     <div style={{
                         maxWidth: "88%",
@@ -543,6 +735,7 @@ export default function ChatBox() {
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && handleSend()}
+                    ref={inputRef}
                     placeholder="Any plans? Let's chat..."
                     disabled={isLoading}
                     style={{

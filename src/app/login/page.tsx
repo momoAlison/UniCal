@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Image from "next/image";
 
 function LoginContent() {
     const searchParams = useSearchParams();
@@ -48,21 +49,14 @@ function LoginContent() {
                 }}
             >
                 {/* Logo */}
-                <div
-                    style={{
-                        width: "64px",
-                        height: "64px",
-                        background: "linear-gradient(135deg,#c4b8f0 0%,#7c6fcd 100%)",
-                        borderRadius: "20px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "36px",
-                        margin: "0 auto 20px",
-                        boxShadow: "0 4px 16px rgba(124,111,205,0.35)",
-                    }}
-                >
-                    🦄
+                <div style={{ margin: "0 auto 20px", width: "72px", height: "72px" }}>
+                    <Image
+                        src="/logo.png"
+                        alt="UniCal AI"
+                        width={72}
+                        height={72}
+                        style={{ borderRadius: "20px", objectFit: "contain", boxShadow: "0 4px 16px rgba(124,111,205,0.35)" }}
+                    />
                 </div>
 
                 <h1

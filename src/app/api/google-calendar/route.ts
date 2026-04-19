@@ -76,16 +76,27 @@ export async function POST(req: Request) {
     // provider_token is stored in the session cookie by Supabase SSR
     // but getSession() is needed to retrieve it (getUser() doesn't expose it)
     const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.provider_token ?? null;
+    let accessToken: string | null = session?.provider_token ?? null;
+
+    // Fallback for POST: also try DB token
+    if (!accessToken) {
+        const { createClient: createServiceClient } = await import("@supabase/supabase-js");
+        const adminClient = createServiceClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        const { data: tokenRow } = await adminClient
+            .from("user_google_tokens")
+            .select("access_token")
+            .eq("user_id", user.id)
+            .maybeSingle();
+        accessToken = tokenRow?.access_token ?? null;
+    }
 
     if (!accessToken) {
-        // Supabase SSR does not persist provider_token across page reloads by default.
-        // The token is only available immediately after OAuth callback.
-        // We need to store it ourselves in the DB on first login.
-        // For now, return a clear diagnostic error.
         return NextResponse.json(
             {
-                error: "Google access token not available. This is a known Supabase SSR limitation — the provider_token is only present immediately after OAuth login. Please sign out and sign in again, then sync immediately without refreshing the page.",
+                error: "Google access token not available. Please sign out and sign in again to reconnect Google Calendar.",
                 code: "PROVIDER_TOKEN_MISSING",
             },
             { status: 403 }
@@ -163,12 +174,35 @@ export async function GET() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // The session_provider_token IS available in the SSR session cookie right now.
-    // Use it directly — no need for DB lookup.
+    // Try session cookie first (available immediately after OAuth login)
     const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.provider_token ?? null;
+    let accessToken: string | null = session?.provider_token ?? null;
 
-    console.log("[UniCal] GET /api/google-calendar — provider_token:", accessToken ? "✅ present" : "❌ null");
+    console.log("[UniCal] GET /api/google-calendar — session provider_token:", accessToken ? "✅ present" : "❌ null");
+
+    // Fallback: read from user_google_tokens table (persisted at OAuth callback)
+    if (!accessToken) {
+        console.log("[UniCal] Falling back to DB token lookup for user", user.id);
+        const { createClient: createServiceClient } = await import("@supabase/supabase-js");
+        const adminClient = createServiceClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        // Use maybeSingle() instead of single() to avoid "Cannot coerce to single JSON object" error
+        // when there are 0 rows (single() throws on 0 rows, maybeSingle() returns null)
+        const { data: tokenRow, error: tokenErr } = await adminClient
+            .from("user_google_tokens")
+            .select("access_token")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (tokenErr) {
+            console.warn("[UniCal] DB token lookup error:", tokenErr.message);
+        } else {
+            accessToken = tokenRow?.access_token ?? null;
+            console.log("[UniCal] DB token lookup:", accessToken ? "✅ found" : "❌ not found (no row)");
+        }
+    }
 
     if (!accessToken) {
         return NextResponse.json(

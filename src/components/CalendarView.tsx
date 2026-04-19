@@ -3,6 +3,51 @@
 import { useState } from "react";
 import { useApp, CalEvent } from "@/lib/store";
 
+// ── LET AI SCHEDULE BUTTON ────────────────────────────────────────────────────
+
+function LetAIScheduleButton({ onClick }: { onClick: () => void }) {
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "7px 16px",
+                borderRadius: "20px",
+                border: "2px solid #f0c670",
+                background: "linear-gradient(135deg, #7c6fcd 0%, #5347a8 100%)",
+                color: "#fff",
+                fontSize: "12px",
+                fontWeight: 800,
+                cursor: "pointer",
+                fontFamily: "Nunito, sans-serif",
+                boxShadow: "0 0 0 3px rgba(240,198,112,0.25), 0 2px 8px rgba(124,111,205,0.35)",
+                transition: "all .18s",
+                whiteSpace: "nowrap",
+            }}
+        >
+            ✨ Let AI Schedule
+        </button>
+    );
+}
+
+/** Detect overlapping events in a list (any two events whose time ranges overlap) */
+function hasConflicts(evs: Array<{ isoDate: string; isoEnd?: string }>): boolean {
+    const timed = evs.filter(e => e.isoEnd);
+    for (let i = 0; i < timed.length; i++) {
+        for (let j = i + 1; j < timed.length; j++) {
+            const aStart = new Date(timed[i].isoDate).getTime();
+            const aEnd = new Date(timed[i].isoEnd!).getTime();
+            const bStart = new Date(timed[j].isoDate).getTime();
+            const bEnd = new Date(timed[j].isoEnd!).getTime();
+            const GRACE_MS = 5 * 60_000;
+            if (aStart < bEnd - GRACE_MS && aEnd > bStart + GRACE_MS) return true;
+        }
+    }
+    return false;
+}
+
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
 /** Return the day-of-month for a UTC ISO string in the given year/month */
@@ -14,11 +59,12 @@ function isoToDayOfMonth(iso: string, year: number, month: number): number | nul
     return null;
 }
 
-/** Format a UTC ISO string to local time string for display */
-function formatTime(iso: string, tz: string = "UTC"): string {
+/** Format an ISO string to local time string for display (always uses browser local timezone) */
+function formatTime(iso: string, tz?: string): string {
     try {
+        const localTz = tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
         return new Date(iso).toLocaleTimeString("en-US", {
-            timeZone: tz,
+            timeZone: localTz,
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
@@ -26,6 +72,17 @@ function formatTime(iso: string, tz: string = "UTC"): string {
     } catch {
         return "";
     }
+}
+
+/** Get local hour (0-23) from an ISO string */
+function getLocalHour(iso: string): number {
+    return new Date(iso).getHours();
+}
+
+/** Get local date components from an ISO string */
+function getLocalDate(iso: string): { year: number; month: number; date: number } {
+    const d = new Date(iso);
+    return { year: d.getFullYear(), month: d.getMonth(), date: d.getDate() };
 }
 
 const MONTH_NAMES = [
@@ -76,7 +133,7 @@ const chipStyle: Record<string, React.CSSProperties> = {
     "we-blue": { background: "#e6f1fb", color: "#175fa5" },
 };
 
-const TIMES = ["7:00", "8:00", "9:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+const TIMES = ["7:00", "8:00", "9:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"];
 
 // ── SHARED EVENT COMPONENT ────────────────────────────────────────────────────
 
@@ -240,17 +297,20 @@ function WeekView() {
     const today = new Date();
     const [weekOffset, setWeekOffset] = useState(0);
 
-    const weekStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - today.getUTCDay() + weekOffset * 7));
+    // Build week days using LOCAL date (not UTC) so the week grid matches the user's timezone
+    const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const weekStartLocal = new Date(todayLocal);
+    weekStartLocal.setDate(todayLocal.getDate() - todayLocal.getDay() + weekOffset * 7);
 
     const weekDays = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(weekStart);
-        d.setUTCDate(weekStart.getUTCDate() + i);
+        const d = new Date(weekStartLocal);
+        d.setDate(weekStartLocal.getDate() + i);
         return {
             dow: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i],
-            num: d.getUTCDate(),
-            month: d.getUTCMonth(),
-            year: d.getUTCFullYear(),
-            isToday: d.getUTCFullYear() === today.getUTCFullYear() && d.getUTCMonth() === today.getUTCMonth() && d.getUTCDate() === today.getUTCDate(),
+            num: d.getDate(),
+            month: d.getMonth(),
+            year: d.getFullYear(),
+            isToday: d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate(),
             isoDate: d.toISOString(),
         };
     });
@@ -267,20 +327,48 @@ function WeekView() {
     // Map all events (seed + AI) to week columns
     const allEvents = [...SEED_EVENTS, ...events];
     const weekEvs: WeekEv[] = [];
+    const SLOT_HEIGHT = 56; // px per hour slot
+
     weekDays.forEach((wd, col) => {
         const dayEvs = allEvents.filter(e => {
+            // Match by LOCAL date (not UTC) so events appear on the correct calendar day
             const d = new Date(e.isoDate);
-            return d.getUTCFullYear() === wd.year && d.getUTCMonth() === wd.month && d.getUTCDate() === wd.num;
+            return d.getFullYear() === wd.year && d.getMonth() === wd.month && d.getDate() === wd.num;
         });
         dayEvs.forEach((e) => {
-            // Use local hours (not UTC) so events appear at the correct local time slot
-            const hour = new Date(e.isoDate).getHours();
-            const slot = Math.max(0, Math.min(TIMES.length - 1, hour - 7));
-            weekEvs.push({ id: e.id, col, slot, h: 1, text: e.text, type: e.type, cls: e.color.replace("chip-", "we-"), isNew: e.isNew, isPreview: e.status === "preview" } as WeekEv & { isPreview?: boolean });
+            const startD = new Date(e.isoDate);
+            // Local minutes from 7:00 (the first slot)
+            const startMinutesFromBase = (startD.getHours() - 7) * 60 + startD.getMinutes();
+            const topPx = Math.max(0, startMinutesFromBase) * (SLOT_HEIGHT / 60);
+
+            // Duration in minutes (use isoEnd if available, else default 60 min)
+            let durationMin = 60;
+            if (e.isoEnd) {
+                const endD = new Date(e.isoEnd);
+                durationMin = Math.max(30, (endD.getTime() - startD.getTime()) / 60000);
+            }
+            const heightPx = durationMin * (SLOT_HEIGHT / 60);
+
+            weekEvs.push({
+                id: e.id, col,
+                slot: 0, // unused — we use topPx/heightPx instead
+                topPx, heightPx,
+                h: 1, text: e.text, type: e.type,
+                cls: e.color.replace("chip-", "we-"),
+                isNew: e.isNew,
+                isPreview: e.status === "preview",
+            } as WeekEv & { isPreview?: boolean; topPx: number; heightPx: number });
         });
     });
 
     const toggleDone = (id: string) => setDoneIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+    // Detect conflicts among this week's events
+    const weekAllEvs = allEvents.filter(e => {
+        const d = new Date(e.isoDate);
+        return weekDays.some(wd => d.getFullYear() === wd.year && d.getMonth() === wd.month && d.getDate() === wd.num);
+    });
+    const weekHasConflict = hasConflicts(weekAllEvs);
 
     return (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -290,6 +378,14 @@ function WeekView() {
                     <button onClick={() => navigate(-1)} style={{ width: "28px", height: "28px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>‹</button>
                     <button onClick={() => navigate(1)} style={{ width: "28px", height: "28px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>›</button>
                 </div>
+                {weekHasConflict && (
+                    <div style={{ marginLeft: "auto" }}>
+                        <LetAIScheduleButton onClick={() => {
+                            // Focus the chat input — dispatch a custom event the ChatBox can listen to
+                            window.dispatchEvent(new CustomEvent("unical:focus-chat", { detail: { prefill: "I have scheduling conflicts this week. Can you help me reschedule?" } }));
+                        }} />
+                    </div>
+                )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "56px repeat(7,1fr)", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
                 <div style={{ padding: "10px 6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -318,9 +414,11 @@ function WeekView() {
                             <div key={c} style={{ borderLeft: "1px solid var(--border)", position: "relative", background: isToday ? "linear-gradient(180deg,#faf8ff 0%,#fff 100%)" : undefined }}>
                                 {TIMES.map((_, s) => <div key={s} style={{ height: "56px", borderBottom: "1px solid var(--border)" }} />)}
                                 {colEvs.map(ev => {
-                                    const evAny = ev as WeekEv & { isPreview?: boolean };
+                                    const evAny = ev as WeekEv & { isPreview?: boolean; topPx?: number; heightPx?: number };
+                                    const top = evAny.topPx ?? (ev.slot * 56 + 4);
+                                    const height = evAny.heightPx ?? (ev.h * 56 - 8);
                                     return (
-                                        <div key={ev.id} style={{ position: "absolute", left: "3px", right: "3px", top: `${ev.slot * 56 + 4}px`, height: `${ev.h * 56 - 8}px`, zIndex: 2, animation: ev.isNew ? "fadeSlideIn .4s ease" : undefined }}>
+                                        <div key={ev.id} style={{ position: "absolute", left: "3px", right: "3px", top: `${top}px`, height: `${height}px`, zIndex: 2, animation: ev.isNew ? "fadeSlideIn .4s ease" : undefined }}>
                                             <CheckboxEvent text={ev.text} done={doneIds.has(ev.id)} isFixed={ev.type === "fixed"} color={ev.cls} isNew={ev.isNew} isPreview={evAny.isPreview} onToggle={() => toggleDone(ev.id)} />
                                         </div>
                                     );
@@ -356,14 +454,26 @@ function DayView() {
         return d.getUTCFullYear() === viewDate.getUTCFullYear() && d.getUTCMonth() === viewDate.getUTCMonth() && d.getUTCDate() === viewDate.getUTCDate();
     });
 
-    const tasks: (DayTask & { isPreview?: boolean })[] = dayEvs.map(e => {
+    const DAY_SLOT_HEIGHT = 72; // px per hour slot in day view
+
+    const tasks: (DayTask & { isPreview?: boolean; topPx?: number; heightPx?: number })[] = dayEvs.map(e => {
+        const startD = new Date(e.isoDate);
         // Use local hours (not UTC) so events appear at the correct local time slot
-        const hour = new Date(e.isoDate).getHours();
-        const slot = Math.max(0, Math.min(TIMES.length - 1, hour - 7));
+        const startMinutesFromBase = (startD.getHours() - 7) * 60 + startD.getMinutes();
+        const topPx = Math.max(0, startMinutesFromBase) * (DAY_SLOT_HEIGHT / 60);
+
+        let durationMin = 60;
+        if (e.isoEnd) {
+            const endD = new Date(e.isoEnd);
+            durationMin = Math.max(30, (endD.getTime() - startD.getTime()) / 60000);
+        }
+        const heightPx = durationMin * (DAY_SLOT_HEIGHT / 60);
+
+        const slot = Math.max(0, Math.min(TIMES.length - 1, startD.getHours() - 7));
         // Display time in local timezone
         const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const timeStr = formatTime(e.isoDate, localTz) + (e.isoEnd ? " - " + formatTime(e.isoEnd, localTz) : "");
-        return { id: e.id, text: e.text, time: timeStr, type: e.type, cls: e.color.replace("chip-", "we-"), done: doneIds.has(e.id), slot, isPreview: e.status === "preview" };
+        return { id: e.id, text: e.text, time: timeStr, type: e.type, cls: e.color.replace("chip-", "we-"), done: doneIds.has(e.id), slot, topPx, heightPx, isPreview: e.status === "preview" };
     });
 
     const aiTasks = tasks.filter(t => t.type === "ai");
@@ -371,6 +481,9 @@ function DayView() {
     const aiPct = aiTasks.length > 0 ? Math.round((aiDone / aiTasks.length) * 100) : 0;
 
     const toggleDone = (id: string) => setDoneIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+    // Detect conflicts among today's events
+    const dayHasConflict = hasConflicts(dayEvs);
 
     return (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -383,6 +496,11 @@ function DayView() {
                     <div style={{ fontSize: "18px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.4px" }}>{dayLabel}</div>
                     <div style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600, marginTop: "1px" }}>{isToday ? "Today" : ""} · {aiTasks.length} AI tasks</div>
                 </div>
+                {dayHasConflict && (
+                    <LetAIScheduleButton onClick={() => {
+                        window.dispatchEvent(new CustomEvent("unical:focus-chat", { detail: { prefill: `I have scheduling conflicts on ${dayLabel}. Can you help me reschedule?` } }));
+                    }} />
+                )}
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)" }}>AI Task Progress</div>
                     <svg width="48" height="48" viewBox="0 0 48 48">
@@ -394,18 +512,20 @@ function DayView() {
             </div>
             <div style={{ flex: 1, overflowY: "auto", display: "flex" }}>
                 <div style={{ width: "64px", background: "#fff", borderRight: "1px solid var(--border)", flexShrink: 0 }}>
-                    {TIMES.map(t => <div key={t} style={{ height: "72px", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "6px 10px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>{t}</span></div>)}
+                    {TIMES.map(t => <div key={t} style={{ height: `${DAY_SLOT_HEIGHT}px`, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "6px 10px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>{t}</span></div>)}
                 </div>
-                <div style={{ flex: 1, background: "#fff" }}>
-                    {TIMES.map((_, s) => {
-                        const ev = tasks.find(t => t.slot === s);
+                <div style={{ flex: 1, background: "#fff", position: "relative" }}>
+                    {/* Background grid rows */}
+                    {TIMES.map((_, s) => (
+                        <div key={s} style={{ height: `${DAY_SLOT_HEIGHT}px`, borderBottom: "1px solid var(--border)" }} />
+                    ))}
+                    {/* Events absolutely positioned by topPx/heightPx */}
+                    {tasks.map(ev => {
+                        const top = ev.topPx ?? (ev.slot * DAY_SLOT_HEIGHT + 4);
+                        const height = ev.heightPx ?? (DAY_SLOT_HEIGHT - 8);
                         return (
-                            <div key={s} style={{ height: "72px", borderBottom: "1px solid var(--border)", padding: "6px 10px" }}>
-                                {ev && (
-                                    <div style={{ height: "60px", display: "flex", alignItems: "stretch" }}>
-                                        <CheckboxEvent text={`${ev.text}  ·  ${ev.time}`} done={doneIds.has(ev.id)} isFixed={ev.type === "fixed"} color={ev.cls} isNew={ev.id.startsWith("new")} isPreview={ev.isPreview} onToggle={() => toggleDone(ev.id)} />
-                                    </div>
-                                )}
+                            <div key={ev.id} style={{ position: "absolute", left: "10px", right: "10px", top: `${top}px`, height: `${height}px`, zIndex: 2 }}>
+                                <CheckboxEvent text={`${ev.text}  ·  ${ev.time}`} done={doneIds.has(ev.id)} isFixed={ev.type === "fixed"} color={ev.cls} isNew={ev.id.startsWith("new")} isPreview={ev.isPreview} onToggle={() => toggleDone(ev.id)} />
                             </div>
                         );
                     })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useApp } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -134,9 +135,13 @@ export default function Header() {
         >
             {/* Logo wordmark */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "130px" }}>
-                <div style={{ width: "32px", height: "32px", background: "linear-gradient(135deg,#c4b8f0 0%,#7c6fcd 100%)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", boxShadow: "0 2px 8px rgba(124,111,205,0.3)", flexShrink: 0 }}>
-                    🦄
-                </div>
+                <Image
+                    src="/logo.png"
+                    alt="UniCal AI"
+                    width={32}
+                    height={32}
+                    style={{ borderRadius: "10px", flexShrink: 0, objectFit: "contain" }}
+                />
                 <span style={{ fontSize: "16px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.3px" }}>UniCal AI</span>
             </div>
 
