@@ -117,3 +117,28 @@ create policy "Users can view own trophies"
 create policy "Users can insert own trophies"
     on public.trophies for insert
     with check (auth.uid() = user_id);
+
+-- ── 6. user_google_tokens table ───────────────────────────────────────────────
+-- Stores the Google OAuth provider_token per user so it survives page reloads.
+-- Supabase SSR does NOT persist provider_token in cookies across requests;
+-- we capture it in the OAuth callback and store it here.
+create table if not exists public.user_google_tokens (
+    user_id         uuid primary key references public.users(id) on delete cascade,
+    access_token    text not null,
+    refresh_token   text,
+    updated_at      timestamptz not null default now()
+);
+
+alter table public.user_google_tokens enable row level security;
+
+create policy "Users can view own google tokens"
+    on public.user_google_tokens for select
+    using (auth.uid() = user_id);
+
+create policy "Users can upsert own google tokens"
+    on public.user_google_tokens for insert
+    with check (auth.uid() = user_id);
+
+create policy "Users can update own google tokens"
+    on public.user_google_tokens for update
+    using (auth.uid() = user_id);

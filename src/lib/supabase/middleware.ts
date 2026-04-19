@@ -40,6 +40,8 @@ export async function updateSession(request: NextRequest) {
         pathname.startsWith("/login") ||
         pathname.startsWith("/api/auth") ||
         pathname.startsWith("/api/chat") ||
+        pathname.startsWith("/api/debug-token") ||
+        pathname.startsWith("/api/debug-gcal") ||
         pathname.startsWith("/_next") ||
         pathname.startsWith("/favicon");
 

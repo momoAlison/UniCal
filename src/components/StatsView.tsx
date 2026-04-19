@@ -72,8 +72,6 @@ export default function StatsView() {
     // ── Goal progress rows ─────────────────────────────────────────────────
     const seedRows = [
         { name: "Competitor Analysis", pct: 60, color: "#e784b0", val: "6 / 10h" },
-        { name: "Daily Morning Run", pct: 71, color: "#4bbfa8", val: "15 / 21 days" },
-        { name: "Monthly Retrospective", pct: 25, color: "#f0a653", val: "1 / 4h" },
         { name: "Python Learning Plan", pct: 42, color: "#5ba4e5", val: "4.2 / 10h" },
     ];
     const aiRows = goals.map(g => {

@@ -49,18 +49,13 @@ function buildSeedEvents(): CalEvent[] {
         { id: "f1", isoDate: d(3), day: 3, text: "Project Review", color: "chip-blue", type: "fixed" },
         { id: "f2", isoDate: d(9), day: 9, text: "Team Meeting", color: "chip-blue", type: "fixed" },
         { id: "f3", isoDate: d(16), day: 16, text: "Standup", color: "chip-blue", type: "fixed" },
-        { id: "a1", isoDate: d(7), day: 7, text: "Morning Run", color: "chip-teal", type: "ai" },
         { id: "a2", isoDate: d(8), day: 8, text: "Stockholm Trip", color: "chip-purple", type: "ai" },
-        { id: "a3", isoDate: d(8), day: 8, text: "Run 30min", color: "chip-teal", type: "ai" },
         { id: "a4", isoDate: d(9), day: 9, text: "Stockholm Trip", color: "chip-purple", type: "ai" },
         { id: "a5", isoDate: d(10), day: 10, text: "Stockholm Trip", color: "chip-purple", type: "ai" },
-        { id: "a6", isoDate: d(10), day: 10, text: "Afternoon Workout", color: "chip-teal", type: "ai" },
         { id: "a7", isoDate: d(14), day: 14, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
         { id: "a8", isoDate: d(15), day: 15, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
         { id: "a9", isoDate: d(15), day: 15, text: "Data Analysis", color: "chip-amber", type: "ai" },
         { id: "a10", isoDate: d(16), day: 16, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
-        { id: "a11", isoDate: d(21), day: 21, text: "Morning Run", color: "chip-teal", type: "ai" },
-        { id: "a12", isoDate: d(28), day: 28, text: "Monthly Review", color: "chip-amber", type: "ai" },
     ];
 }
 
@@ -278,7 +273,8 @@ function WeekView() {
             return d.getUTCFullYear() === wd.year && d.getUTCMonth() === wd.month && d.getUTCDate() === wd.num;
         });
         dayEvs.forEach((e) => {
-            const hour = new Date(e.isoDate).getUTCHours();
+            // Use local hours (not UTC) so events appear at the correct local time slot
+            const hour = new Date(e.isoDate).getHours();
             const slot = Math.max(0, Math.min(TIMES.length - 1, hour - 7));
             weekEvs.push({ id: e.id, col, slot, h: 1, text: e.text, type: e.type, cls: e.color.replace("chip-", "we-"), isNew: e.isNew, isPreview: e.status === "preview" } as WeekEv & { isPreview?: boolean });
         });
@@ -361,9 +357,12 @@ function DayView() {
     });
 
     const tasks: (DayTask & { isPreview?: boolean })[] = dayEvs.map(e => {
-        const hour = new Date(e.isoDate).getUTCHours();
+        // Use local hours (not UTC) so events appear at the correct local time slot
+        const hour = new Date(e.isoDate).getHours();
         const slot = Math.max(0, Math.min(TIMES.length - 1, hour - 7));
-        const timeStr = formatTime(e.isoDate) + (e.isoEnd ? " - " + formatTime(e.isoEnd) : "");
+        // Display time in local timezone
+        const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const timeStr = formatTime(e.isoDate, localTz) + (e.isoEnd ? " - " + formatTime(e.isoEnd, localTz) : "");
         return { id: e.id, text: e.text, time: timeStr, type: e.type, cls: e.color.replace("chip-", "we-"), done: doneIds.has(e.id), slot, isPreview: e.status === "preview" };
     });
 
