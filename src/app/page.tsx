@@ -1,56 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { AppContext, AppState, Page, CalView, CalEvent } from "@/lib/store";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import CalendarView from "@/components/CalendarView";
 import ChatBox from "@/components/ChatBox";
-import TrophyView from "@/components/TrophyView";
+import GoalsView from "@/components/GoalsView";
 import StatsView from "@/components/StatsView";
-
-type Page = "calendar" | "goals" | "trophy" | "stats";
+import TrophyView from "@/components/TrophyView";
 
 export default function Home() {
     const [currentPage, setCurrentPage] = useState<Page>("calendar");
-    const [sidebarItem, setSidebarItem] = useState("calendar");
+    const [calView, setCalView] = useState<CalView>("month");
+    const [events, setEvents] = useState<CalEvent[]>([]);
 
-    const showChat = currentPage === "calendar" || currentPage === "goals";
+    const addEvents = useCallback((evs: CalEvent[]) => {
+        setEvents(prev => {
+            const existingIds = new Set(prev.map(e => e.id));
+            const newEvs = evs.filter(e => !existingIds.has(e.id));
+            return [...prev, ...newEvs];
+        });
+    }, []);
+
+    const toggleEventDone = useCallback((id: string) => {
+        setEvents(prev => prev.map(e => e.id === id ? { ...e, done: !("done" in e) } : e));
+    }, []);
+
+    const ctx: AppState = {
+        currentPage,
+        calView,
+        events,
+        setPage: setCurrentPage,
+        setCalView,
+        addEvents,
+        toggleEventDone,
+    };
 
     return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100vh",
-                overflow: "hidden",
-            }}
-        >
-            <Header currentPage={currentPage} onPageChange={setCurrentPage} />
+        <AppContext.Provider value={ctx}>
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100vh",
+                    overflow: "hidden",
+                }}
+            >
+                <Header />
 
-            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-                <Sidebar
-                    activeItem={sidebarItem}
-                    onItemChange={setSidebarItem}
-                />
+                <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                    <Sidebar />
 
-                {/* Content area */}
-                <div
-                    style={{
-                        flex: 1,
-                        display: "flex",
-                        overflow: "hidden",
-                        position: "relative",
-                    }}
-                >
-                    {(currentPage === "calendar" ||
-                        currentPage === "goals") && <CalendarView />}
-                    {currentPage === "trophy" && <TrophyView />}
-                    {currentPage === "stats" && <StatsView />}
+                    {/* Main content */}
+                    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+                        {currentPage === "calendar" && <CalendarView />}
+                        {currentPage === "goals" && <GoalsView />}
+                        {currentPage === "stats" && <StatsView />}
+                        {currentPage === "trophy" && <TrophyView />}
+                    </div>
+
+                    {/* ChatPanel — always visible (Chat-First) */}
+                    <ChatBox />
                 </div>
-
-                {/* AI Chat Panel — shown only on calendar/goals pages */}
-                {showChat && <ChatBox />}
             </div>
-        </div>
+        </AppContext.Provider>
     );
 }

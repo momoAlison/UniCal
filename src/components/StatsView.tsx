@@ -1,39 +1,38 @@
 "use client";
 
 const barData = [
-    { val: "1.5h", h: 30, color: "#d9d2f5", lbl: "日" },
-    { val: "3.0h", h: 60, color: "#7c6fcd", lbl: "一" },
-    { val: "2.5h", h: 50, color: "#9d93d8", lbl: "二" },
-    { val: "2.0h", h: 40, color: "#7c6fcd", lbl: "三" },
-    { val: "3.5h", h: 70, color: "#5347a8", lbl: "四" },
-    { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "五" },
-    { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "六" },
+    { val: "1.5h", h: 30, color: "#d9d2f5", lbl: "Sun" },
+    { val: "3.0h", h: 60, color: "#7c6fcd", lbl: "Mon" },
+    { val: "2.5h", h: 50, color: "#9d93d8", lbl: "Tue" },
+    { val: "2.0h", h: 40, color: "#7c6fcd", lbl: "Wed" },
+    { val: "3.5h", h: 70, color: "#5347a8", lbl: "Thu" },
+    { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "Fri" },
+    { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "Sat" },
 ];
 
 const catRows = [
-    { name: "竞品分析报告", pct: 60, color: "#e784b0", val: "6 / 10h" },
-    { name: "每日晨跑计划", pct: 71, color: "#4bbfa8", val: "15 / 21天" },
-    { name: "斯德哥尔摩行程", pct: 100, color: "#7c6fcd", val: "3 / 3天 ✓" },
-    { name: "月度复盘总结", pct: 25, color: "#f0a653", val: "1 / 4h" },
-    { name: "Python 学习计划", pct: 42, color: "#5ba4e5", val: "4.2 / 10h" },
+    { name: "Competitor Analysis", pct: 60, color: "#e784b0", val: "6 / 10h" },
+    { name: "Daily Morning Run", pct: 71, color: "#4bbfa8", val: "15 / 21 days" },
+    { name: "Stockholm Trip", pct: 100, color: "#7c6fcd", val: "3 / 3 days ✓" },
+    { name: "Monthly Retrospective", pct: 25, color: "#f0a653", val: "1 / 4h" },
+    { name: "Python Learning Plan", pct: 42, color: "#5ba4e5", val: "4.2 / 10h" },
 ];
 
 const donutLegend = [
-    { color: "#7c6fcd", name: "工作", pct: "40%" },
-    { color: "#4bbfa8", name: "运动", pct: "24%" },
-    { color: "#e784b0", name: "旅行", pct: "16%" },
-    { color: "#f0a653", name: "学习", pct: "11%" },
-    { color: "#d9d2f5", name: "其他", pct: "9%" },
+    { color: "#7c6fcd", name: "Work", pct: "40%" },
+    { color: "#4bbfa8", name: "Fitness", pct: "24%" },
+    { color: "#e784b0", name: "Travel", pct: "16%" },
+    { color: "#f0a653", name: "Learning", pct: "11%" },
+    { color: "#d9d2f5", name: "Other", pct: "9%" },
 ];
 
 const kpis = [
-    { lbl: "本周专注时长", val: "14.5h", chg: "↑ 18% 较上周", up: true },
-    { lbl: "完成任务数", val: "23", chg: "↑ 4 较上周", up: true },
-    { lbl: "任务完成率", val: "86%", chg: "↑ 12pp", up: true },
-    { lbl: "当前连胜", val: "7天", chg: "最长 14 天", neutral: true },
+    { lbl: "Focus Time This Week", val: "14.5h", chg: "↑ 18% vs last week", up: true },
+    { lbl: "Tasks Completed", val: "23", chg: "↑ 4 vs last week", up: true },
+    { lbl: "Completion Rate", val: "86%", chg: "↑ 12pp", up: true },
+    { lbl: "Current Streak", val: "7 days", chg: "Best: 14 days", neutral: true },
 ];
 
-// Generate heatmap data deterministically
 function getHeatmapColor(w: number, d: number): string {
     const colors = ["#f0eef8", "#d9d2f5", "#b09fe8", "#7c6fcd", "#5347a8"];
     const seed = (w * 7 + d) % 17;
@@ -59,7 +58,7 @@ export default function StatsView() {
             <div style={{ display: "grid", gridTemplateColumns: "1.65fr 1fr", gap: "14px", marginBottom: "22px" }}>
                 {/* Bar Chart */}
                 <div style={{ background: "#fff", borderRadius: "16px", padding: "20px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)" }}>
-                    <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>每日专注时长（本周）</div>
+                    <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>Daily Focus Time (This Week)</div>
                     <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", height: "130px" }}>
                         {barData.map(b => (
                             <div key={b.lbl} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
@@ -73,7 +72,7 @@ export default function StatsView() {
 
                 {/* Donut Chart */}
                 <div style={{ background: "#fff", borderRadius: "16px", padding: "20px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)" }}>
-                    <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>任务类型分布</div>
+                    <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>Task Type Breakdown</div>
                     <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
                         <svg width="100" height="100" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="38" fill="none" stroke="#f0eef8" strokeWidth="16" />
@@ -98,29 +97,29 @@ export default function StatsView() {
 
             {/* Category Progress */}
             <div style={{ background: "#fff", borderRadius: "16px", padding: "20px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)", marginBottom: "22px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>目标完成进度</div>
+                <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>Goal Progress</div>
                 {catRows.map(r => (
                     <div key={r.name} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "11px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", minWidth: "110px" }}>{r.name}</div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", minWidth: "140px" }}>{r.name}</div>
                         <div style={{ flex: 1, height: "10px", background: "var(--bg)", borderRadius: "20px", overflow: "hidden", border: "1px solid var(--border)" }}>
                             <div style={{ height: "100%", borderRadius: "20px", background: r.color, width: `${r.pct}%`, transition: "width .8s cubic-bezier(.4,0,.2,1)" }} />
                         </div>
-                        <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--muted)", minWidth: "44px", textAlign: "right" }}>{r.val}</div>
+                        <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--muted)", minWidth: "80px", textAlign: "right" }}>{r.val}</div>
                     </div>
                 ))}
             </div>
 
             {/* Heatmap */}
             <div style={{ background: "#fff", borderRadius: "16px", padding: "20px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)", marginBottom: "22px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>活跃度热力图（近 12 周）</div>
+                <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>Activity Heatmap (Last 12 Weeks)</div>
                 <div style={{ display: "flex", gap: "3px", marginBottom: "6px", paddingLeft: "20px" }}>
-                    {["五月", "六月", "七月"].map(m => (
+                    {["May", "Jun", "Jul"].map(m => (
                         <span key={m} style={{ flex: 1, fontSize: "10px", fontWeight: 700, color: "var(--muted)" }}>{m}</span>
                     ))}
                 </div>
                 <div style={{ display: "flex", gap: "6px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "3px", justifyContent: "space-around", paddingTop: "2px" }}>
-                        {["一", "三", "五", "日"].map(d => (
+                        {["Mon", "Wed", "Fri", "Sun"].map(d => (
                             <div key={d} style={{ fontSize: "9px", color: "var(--muted2)", fontWeight: 700, height: "13px", display: "flex", alignItems: "center" }}>{d}</div>
                         ))}
                     </div>
@@ -138,7 +137,7 @@ export default function StatsView() {
 
             {/* Trend */}
             <div style={{ background: "#fff", borderRadius: "16px", padding: "20px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)", marginBottom: "22px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>近 8 周专注趋势</div>
+                <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>8-Week Focus Trend</div>
                 <svg width="100%" height="80" viewBox="0 0 500 80" preserveAspectRatio="none" style={{ overflow: "visible" }}>
                     <defs>
                         <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
@@ -154,8 +153,8 @@ export default function StatsView() {
                     <circle cx="500" cy="10" r="5" fill="#5347a8" stroke="#fff" strokeWidth="2" />
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--muted)", fontWeight: 700, marginTop: "4px" }}>
-                    <span>周均 8.2h</span><span>周均 10.5h</span><span>周均 12.8h</span>
-                    <span style={{ color: "var(--purple-deep)", fontWeight: 900 }}>本周 14.5h ↑</span>
+                    <span>Avg 8.2h/wk</span><span>Avg 10.5h/wk</span><span>Avg 12.8h/wk</span>
+                    <span style={{ color: "var(--purple-deep)", fontWeight: 900 }}>This week 14.5h ↑</span>
                 </div>
             </div>
         </div>

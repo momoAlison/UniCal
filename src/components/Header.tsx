@@ -1,147 +1,72 @@
 "use client";
 
-type Page = "calendar" | "goals" | "trophy" | "stats";
+import { useApp } from "@/lib/store";
 
-interface HeaderProps {
-    currentPage: Page;
-    onPageChange: (page: Page) => void;
-}
+export default function Header() {
+    const { currentPage, calView, setCalView } = useApp();
 
-const navItems: { id: Page; label: string }[] = [
-    { id: "calendar", label: "日历" },
-    { id: "goals", label: "目标" },
-    { id: "trophy", label: "奖杯" },
-    { id: "stats", label: "统计" },
-];
-
-export default function Header({ currentPage, onPageChange }: HeaderProps) {
     return (
         <header
             style={{
                 display: "flex",
                 alignItems: "center",
-                padding: "0 24px",
-                height: "58px",
+                padding: "0 20px",
+                height: "54px",
                 background: "#fff",
                 borderBottom: "1px solid var(--border)",
                 flexShrink: 0,
-                gap: "16px",
+                gap: "12px",
                 position: "relative",
                 zIndex: 10,
-                boxShadow:
-                    "0 1px 0 var(--border),0 2px 8px rgba(124,111,205,0.06)",
+                boxShadow: "0 1px 0 var(--border),0 2px 8px rgba(124,111,205,0.06)",
             }}
         >
-            {/* Logo */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "9px",
-                    fontSize: "17px",
-                    fontWeight: 900,
-                    color: "var(--purple-deep)",
-                    minWidth: "130px",
-                    letterSpacing: "-0.3px",
-                }}
-            >
-                <div
-                    style={{
-                        width: "34px",
-                        height: "34px",
-                        background:
-                            "linear-gradient(135deg,#c4b8f0 0%,#7c6fcd 100%)",
-                        borderRadius: "10px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "18px",
-                        boxShadow: "0 2px 8px rgba(124,111,205,0.3)",
-                    }}
-                >
+            {/* Logo wordmark */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "130px" }}>
+                <div style={{ width: "32px", height: "32px", background: "linear-gradient(135deg,#c4b8f0 0%,#7c6fcd 100%)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", boxShadow: "0 2px 8px rgba(124,111,205,0.3)", flexShrink: 0 }}>
                     🦄
                 </div>
-                UniCal AI
+                <span style={{ fontSize: "16px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.3px" }}>UniCal AI</span>
             </div>
 
-            {/* Navigation */}
-            <nav style={{ display: "flex", gap: "2px", flex: 1 }}>
-                {navItems.map((item) => (
-                    <button
-                        key={item.id}
-                        onClick={() => onPageChange(item.id)}
-                        style={{
-                            padding: "7px 18px",
-                            borderRadius: "22px",
-                            border: "none",
-                            background:
-                                currentPage === item.id
-                                    ? "var(--purple)"
-                                    : "transparent",
-                            fontSize: "13px",
-                            fontWeight: 700,
-                            color:
-                                currentPage === item.id
-                                    ? "#fff"
-                                    : "var(--muted)",
-                            cursor: "pointer",
-                            fontFamily: "Nunito, sans-serif",
-                            boxShadow:
-                                currentPage === item.id
-                                    ? "0 2px 8px rgba(124,111,205,0.35)"
-                                    : "none",
-                            transition: "all .18s",
-                        }}
-                    >
-                        {item.label}
-                    </button>
-                ))}
-            </nav>
+            {/* Context area */}
+            <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+                {currentPage === "calendar" && (
+                    <div style={{ display: "flex", gap: "2px", background: "var(--bg)", borderRadius: "10px", padding: "3px" }}>
+                        {(["Month", "Week", "Day"] as const).map((label, i) => {
+                            const views = ["month", "week", "day"] as const;
+                            const v = views[i];
+                            const active = calView === v;
+                            return (
+                                <button key={v} onClick={() => setCalView(v)} style={{ padding: "5px 20px", borderRadius: "8px", border: "none", background: active ? "#fff" : "transparent", fontSize: "13px", fontWeight: 800, color: active ? "var(--purple)" : "var(--muted)", cursor: "pointer", fontFamily: "Nunito, sans-serif", boxShadow: active ? "0 1px 6px rgba(124,111,205,0.18)" : "none", transition: "all .18s" }}>
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+                {currentPage === "goals" && (
+                    <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted)" }}>🎯 Goal Tracker</div>
+                )}
+                {currentPage === "stats" && (
+                    <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted)" }}>📈 Analytics</div>
+                )}
+                {currentPage === "trophy" && (
+                    <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted)" }}>🏆 Hall of Fame</div>
+                )}
+            </div>
 
             {/* Right side */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginLeft: "auto",
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "7px",
-                        background:
-                            "linear-gradient(135deg,#ffe8e8,#fff0f0)",
-                        color: "var(--streak)",
-                        borderRadius: "20px",
-                        padding: "6px 14px",
-                        fontSize: "13px",
-                        fontWeight: 800,
-                        border: "1px solid #ffc9c9",
-                    }}
-                >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "linear-gradient(135deg,#ffe8e8,#fff0f0)", color: "var(--streak)", borderRadius: "20px", padding: "5px 12px", fontSize: "12px", fontWeight: 800, border: "1px solid #ffc9c9" }}>
                     <span className="streak-flame">🔥</span>
-                    连胜 7 天
+                    7-day streak
                 </div>
-                <div
-                    style={{
-                        width: "34px",
-                        height: "34px",
-                        background:
-                            "linear-gradient(135deg,var(--purple),var(--purple-deep))",
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#fff",
-                        fontSize: "12px",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        boxShadow: "0 2px 6px rgba(124,111,205,0.35)",
-                    }}
-                >
+                <button style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", position: "relative" }}>
+                    🔔
+                    <span style={{ position: "absolute", top: "2px", right: "2px", width: "8px", height: "8px", background: "var(--streak)", borderRadius: "50%", border: "1.5px solid #fff" }} />
+                </button>
+                <div style={{ width: "32px", height: "32px", background: "linear-gradient(135deg,var(--purple),var(--purple-deep))", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "11px", fontWeight: 800, cursor: "pointer", boxShadow: "0 2px 6px rgba(124,111,205,0.35)" }}>
                     AS
                 </div>
             </div>

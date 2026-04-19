@@ -1,78 +1,51 @@
 "use client";
 
-interface SidebarProps {
-    activeItem: string;
-    onItemChange: (id: string) => void;
-}
+import { useApp, Page } from "@/lib/store";
 
-const sidebarItems = [
-    { id: "calendar", emoji: "📅", title: "日历" },
-    { id: "clock", emoji: "🕐", title: "时钟" },
-    { id: "stats", emoji: "📈", title: "趋势" },
+const navItems: { id: Page; emoji: string; label: string }[] = [
+    { id: "calendar", emoji: "📅", label: "Calendar" },
+    { id: "goals", emoji: "🎯", label: "Goals" },
+    { id: "stats", emoji: "📈", label: "Stats" },
+    { id: "trophy", emoji: "🏆", label: "Trophies" },
 ];
 
-export default function Sidebar({ activeItem, onItemChange }: SidebarProps) {
-    const btnStyle = (id: string): React.CSSProperties => ({
-        width: "38px",
-        height: "38px",
-        borderRadius: "11px",
-        border: "none",
-        background:
-            activeItem === id ? "var(--purple-light)" : "transparent",
+export default function Sidebar() {
+    const { currentPage, setPage } = useApp();
+
+    const btnStyle = (active: boolean): React.CSSProperties => ({
+        width: "100%",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        gap: "4px",
+        padding: "10px 6px",
+        borderRadius: "12px",
+        border: "none",
+        background: active ? "var(--purple-light)" : "transparent",
         cursor: "pointer",
-        fontSize: "18px",
-        color: "var(--muted)",
-        boxShadow:
-            activeItem === id
-                ? "inset 0 0 0 1.5px var(--purple)"
-                : "none",
+        boxShadow: active ? "inset 0 0 0 1.5px var(--purple)" : "none",
         transition: "all .18s",
     });
 
     return (
-        <aside
-            style={{
-                width: "54px",
-                background: "#fff",
-                borderRight: "1px solid var(--border)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                padding: "16px 0",
-                gap: "6px",
-                flexShrink: 0,
-            }}
-        >
-            {sidebarItems.map((item) => (
-                <button
-                    key={item.id}
-                    title={item.title}
-                    onClick={() => onItemChange(item.id)}
-                    style={btnStyle(item.id)}
-                >
-                    {item.emoji}
+        <aside style={{ width: "64px", background: "#fff", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", padding: "14px 8px", gap: "4px", flexShrink: 0 }}>
+            {navItems.map((item) => (
+                <button key={item.id} title={item.label} onClick={() => setPage(item.id)} style={btnStyle(currentPage === item.id)}>
+                    <span style={{ fontSize: "20px", lineHeight: 1 }}>{item.emoji}</span>
+                    <span style={{ fontSize: "9px", fontWeight: 800, color: currentPage === item.id ? "var(--purple)" : "var(--muted)", letterSpacing: "0.2px" }}>
+                        {item.label}
+                    </span>
                 </button>
             ))}
 
             <div style={{ flex: 1 }} />
 
-            <button
-                title="设置"
-                style={btnStyle("settings")}
-                onClick={() => onItemChange("settings")}
-            >
-                ⚙️
-            </button>
-            <button
-                title="用户"
-                style={btnStyle("user")}
-                onClick={() => onItemChange("user")}
-            >
-                👤
-            </button>
+            {[{ emoji: "⚙️", label: "Settings" }, { emoji: "👤", label: "Profile" }].map((item) => (
+                <button key={item.label} title={item.label} style={btnStyle(false)}>
+                    <span style={{ fontSize: "20px", lineHeight: 1 }}>{item.emoji}</span>
+                    <span style={{ fontSize: "9px", fontWeight: 800, color: "var(--muted)" }}>{item.label}</span>
+                </button>
+            ))}
         </aside>
     );
 }

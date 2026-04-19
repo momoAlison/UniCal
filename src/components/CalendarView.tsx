@@ -1,37 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { useApp, CalEvent } from "@/lib/store";
 
-type CalView = "month" | "week" | "day";
-
-// ── DATA ──────────────────────────────────────────────
-const monthEvents: Record<number, { text: string; cls: string }[]> = {
-    3: [{ text: "项目汇报", cls: "chip-teal" }],
-    7: [{ text: "每日晨跑", cls: "chip-teal" }],
-    8: [
-        { text: "斯德哥尔摩", cls: "chip-purple" },
-        { text: "晨跑 30min", cls: "chip-teal" },
-    ],
-    9: [
-        { text: "斯德哥尔摩", cls: "chip-purple" },
-        { text: "线上会议", cls: "chip-blue" },
-    ],
-    10: [
-        { text: "斯德哥尔摩", cls: "chip-purple" },
-        { text: "下午运动", cls: "chip-teal" },
-    ],
-    14: [{ text: "竞品分析", cls: "chip-pink" }],
-    15: [
-        { text: "竞品分析", cls: "chip-pink" },
-        { text: "数据分析", cls: "chip-amber" },
-    ],
-    16: [
-        { text: "团队站会", cls: "chip-blue" },
-        { text: "竞品分析", cls: "chip-pink" },
-    ],
-    21: [{ text: "每日晨跑", cls: "chip-teal" }],
-    28: [{ text: "月度复盘", cls: "chip-amber" }],
-};
+// ── STATIC SEED DATA ──────────────────────────────────────────────
+const SEED_EVENTS: CalEvent[] = [
+    // Fixed events
+    { id: "f1", day: 3, text: "Project Review", color: "chip-blue", type: "fixed" },
+    { id: "f2", day: 9, text: "Team Meeting", color: "chip-blue", type: "fixed" },
+    { id: "f3", day: 16, text: "Standup", color: "chip-blue", type: "fixed" },
+    // AI tasks
+    { id: "a1", day: 7, text: "Morning Run", color: "chip-teal", type: "ai" },
+    { id: "a2", day: 8, text: "Stockholm Trip", color: "chip-purple", type: "ai" },
+    { id: "a3", day: 8, text: "Run 30min", color: "chip-teal", type: "ai" },
+    { id: "a4", day: 9, text: "Stockholm Trip", color: "chip-purple", type: "ai" },
+    { id: "a5", day: 10, text: "Stockholm Trip", color: "chip-purple", type: "ai" },
+    { id: "a6", day: 10, text: "Afternoon Workout", color: "chip-teal", type: "ai" },
+    { id: "a7", day: 14, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
+    { id: "a8", day: 15, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
+    { id: "a9", day: 15, text: "Data Analysis", color: "chip-amber", type: "ai" },
+    { id: "a10", day: 16, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
+    { id: "a11", day: 21, text: "Morning Run", color: "chip-teal", type: "ai" },
+    { id: "a12", day: 28, text: "Monthly Review", color: "chip-amber", type: "ai" },
+];
 
 const chipStyle: Record<string, React.CSSProperties> = {
     "chip-purple": { background: "#ede9fb", color: "#5347a8" },
@@ -41,65 +32,131 @@ const chipStyle: Record<string, React.CSSProperties> = {
     "chip-blue": { background: "#e6f1fb", color: "#175fa5" },
 };
 
-const TIMES = [
-    "7:00", "8:00", "9:00", "10:00", "11:00", "12:00",
-    "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
-];
-
-const weekEvents = [
-    { col: 1, slot: 0, h: 1, text: "晨跑", cls: "we-teal" },
-    { col: 1, slot: 2, h: 1, text: "竞品分析", cls: "we-pink" },
-    { col: 1, slot: 6, h: 1, text: "资料收集", cls: "we-amber" },
-    { col: 2, slot: 0, h: 1, text: "晨跑", cls: "we-teal" },
-    { col: 2, slot: 1, h: 2, text: "斯德哥尔摩", cls: "we-purple" },
-    { col: 2, slot: 3, h: 1, text: "竞品分析", cls: "we-pink" },
-    { col: 2, slot: 6, h: 1, text: "数据分析", cls: "we-amber" },
-    { col: 3, slot: 1, h: 2, text: "斯德哥尔摩", cls: "we-purple" },
-    { col: 3, slot: 2, h: 1, text: "线上会议", cls: "we-blue" },
-    { col: 3, slot: 6, h: 1, text: "草稿撰写", cls: "we-amber" },
-    { col: 3, slot: 9, h: 1, text: "运动5pm", cls: "we-teal" },
-    { col: 4, slot: 0, h: 1, text: "晨跑", cls: "we-teal" },
-    { col: 4, slot: 1, h: 2, text: "斯德哥尔摩", cls: "we-purple" },
-    { col: 4, slot: 3, h: 1, text: "竞品分析", cls: "we-pink" },
-    { col: 5, slot: 6, h: 1, text: "复盘修改", cls: "we-amber" },
-    { col: 6, slot: 0, h: 1, text: "晨跑", cls: "we-teal" },
-    { col: 6, slot: 8, h: 1, text: "月度复盘", cls: "we-amber" },
-];
-
 const weStyle: Record<string, React.CSSProperties> = {
-    "we-purple": { background: "#ede9fb", color: "#5347a8", borderLeftColor: "#7c6fcd" },
-    "we-teal": { background: "#e0f7f3", color: "#0a5e49", borderLeftColor: "#4bbfa8" },
-    "we-pink": { background: "#fce9f3", color: "#993356", borderLeftColor: "#e784b0" },
-    "we-amber": { background: "#fef3e2", color: "#7a4508", borderLeftColor: "#f0a653" },
-    "we-blue": { background: "#e6f1fb", color: "#175fa5", borderLeftColor: "#5ba4e5" },
+    "we-purple": { background: "#ede9fb", color: "#5347a8" },
+    "we-teal": { background: "#e0f7f3", color: "#0a5e49" },
+    "we-pink": { background: "#fce9f3", color: "#993356" },
+    "we-amber": { background: "#fef3e2", color: "#7a4508" },
+    "we-blue": { background: "#e6f1fb", color: "#175fa5" },
 };
 
-const daySlots = [
-    { slot: 0, text: "晨跑 30min", cls: "we-teal", icon: "🏃", time: "7:00 - 7:30", done: true, pct: 100 },
-    { slot: 1, text: "斯德哥尔摩旅行", cls: "we-purple", icon: "✈️", time: "全天 · 第 1/3 天", done: false, pct: 33 },
-    { slot: 3, text: "竞品分析 · 资料收集", cls: "we-pink", icon: "📊", time: "10:00 - 12:00 · 进行中", done: false, pct: 50 },
-    { slot: 6, text: "数据分析阶段", cls: "we-amber", icon: "🔬", time: "13:00 - 15:00 · 待开始", done: false, pct: 0 },
-];
+const TIMES = ["7:00", "8:00", "9:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
-// ── PROGRESS BARS ──────────────────────────────────────
-function ProgressSection({ title, rows }: {
-    title: string;
-    rows: { color: string; name: string; pct: number; label: string }[];
-}) {
-    return (
-        <div style={{ padding: "12px 20px", background: "#fff", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "9px" }}>
-                {title}
+// ── SHARED EVENT COMPONENT ──────────────────────────────────────────────
+interface CheckboxEventProps {
+    text: string;
+    done: boolean;
+    isFixed: boolean;
+    isNew?: boolean;
+    color: string;
+    onToggle?: () => void;
+    compact?: boolean;
+}
+
+function CheckboxEvent({ text, done, isFixed, isNew, color, onToggle, compact }: CheckboxEventProps) {
+    const base = chipStyle[color] || weStyle[color] || {};
+    const borderStyle = isNew ? "1.5px dashed currentColor" : "1.5px solid currentColor";
+    const showCheckbox = !isFixed;
+
+    if (compact) {
+        return (
+            <div
+                onClick={showCheckbox ? onToggle : undefined}
+                style={{
+                    padding: "2px 6px 2px 4px", borderRadius: "6px", fontSize: "10px", fontWeight: 800,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    cursor: showCheckbox ? "pointer" : "default", display: "flex", alignItems: "center", gap: "4px",
+                    border: borderStyle, opacity: done ? 0.5 : 1,
+                    animation: isNew ? "fadeSlideIn .4s ease" : undefined, transition: "opacity .25s", ...base,
+                }}
+            >
+                {isFixed ? (
+                    <span style={{ fontSize: "9px", flexShrink: 0 }}>🔒</span>
+                ) : (
+                    <div style={{ width: "12px", height: "12px", borderRadius: "3px", flexShrink: 0, border: `1.5px solid ${done ? "transparent" : "#666"}`, background: done ? "#5347a8" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: 900, color: "#fff", transition: "all .2s", boxShadow: done ? "none" : "inset 0 0 0 0.5px rgba(0,0,0,0.08)" }}>
+                        {done ? "✓" : ""}
+                    </div>
+                )}
+                <span style={{ textDecoration: done ? "line-through" : "none", opacity: done ? 0.6 : 1 }}>{text}</span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
-                {rows.map((r, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: r.color, flexShrink: 0 }} />
-                        <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--text)", minWidth: "100px", flexShrink: 0 }}>{r.name}</div>
-                        <div style={{ flex: 1, height: "7px", background: "var(--bg)", borderRadius: "20px", overflow: "hidden", border: "1px solid var(--border)" }}>
-                            <div style={{ height: "100%", borderRadius: "20px", background: r.color, width: `${r.pct}%`, transition: "width .8s cubic-bezier(.4,0,.2,1)" }} />
+        );
+    }
+
+    return (
+        <div
+            onClick={showCheckbox ? onToggle : undefined}
+            style={{
+                borderRadius: "8px", padding: "5px 8px", fontSize: "11px", fontWeight: 800,
+                cursor: showCheckbox ? "pointer" : "default", display: "flex", alignItems: "center", gap: "6px",
+                border: borderStyle, opacity: done ? 0.45 : 1,
+                animation: isNew ? "fadeSlideIn .4s ease" : undefined, transition: "opacity .25s",
+                overflow: "hidden", height: "100%", ...base,
+            }}
+        >
+            {isFixed ? (
+                <span style={{ fontSize: "10px", flexShrink: 0 }}>🔒</span>
+            ) : (
+                <div style={{ width: "15px", height: "15px", borderRadius: "4px", flexShrink: 0, border: done ? "none" : "1.5px solid #666", background: done ? "#5347a8" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 900, color: "#fff", transition: "all .2s", boxShadow: done ? "none" : "inset 0 0 0 0.5px rgba(0,0,0,0.08)" }}>
+                    {done ? "✓" : ""}
+                </div>
+            )}
+            <span style={{ textDecoration: done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</span>
+        </div>
+    );
+}
+
+// ── MONTH VIEW ──────────────────────────────────────────────
+function MonthView() {
+    const { events } = useApp();
+    const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+    const allEvents = [...SEED_EVENTS, ...events];
+
+    const toggleDone = (id: string) => setDoneIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+    const startDow = 2, daysInMonth = 31, daysInPrevMonth = 30;
+    const prevDays: number[] = [];
+    for (let i = 0; i < startDow; i++) prevDays.push(daysInPrevMonth - startDow + 1 + i);
+    const nextDays = Array.from({ length: 35 - startDow - daysInMonth }, (_, i) => i + 1);
+    const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    return (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "12px 20px", gap: "10px", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
+                <div style={{ fontSize: "20px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.5px" }}>July 2025</div>
+                <div style={{ display: "flex", gap: "4px" }}>
+                    {["‹", "›"].map(a => <button key={a} style={{ width: "28px", height: "28px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>{a}</button>)}
+                </div>
+                <div style={{ marginLeft: "auto", display: "flex", gap: "14px", alignItems: "center" }}>
+                    {[{ icon: "🔒", label: "Fixed Event" }, { icon: "☑", label: "AI Task" }].map(l => (
+                        <div key={l.label} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 700, color: "var(--muted)" }}>
+                            <span style={{ fontSize: "10px" }}>{l.icon}</span>{l.label}
                         </div>
-                        <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--muted)", minWidth: "38px", textAlign: "right" }}>{r.label}</div>
+                    ))}
+                </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
+                {DOW.map(d => <div key={d} style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--muted)", letterSpacing: "0.6px" }}>{d}</div>)}
+            </div>
+            <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(7,1fr)", gridTemplateRows: "repeat(5,1fr)", overflow: "hidden" }}>
+                {prevDays.map(d => (
+                    <div key={`p${d}`} style={{ borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "6px", background: "#faf9fd" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted2)", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>{d}</div>
+                    </div>
+                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
+                    const isToday = d === 15;
+                    const evs = allEvents.filter(e => e.day === d);
+                    return (
+                        <div key={d} style={{ borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "6px", background: "#fff", display: "flex", flexDirection: "column", gap: "3px", minHeight: 0, overflow: "hidden" }}>
+                            <div style={{ fontSize: "13px", fontWeight: 800, color: isToday ? "#fff" : "var(--text)", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: isToday ? "var(--purple)" : "transparent", boxShadow: isToday ? "0 2px 6px rgba(124,111,205,0.4)" : "none", flexShrink: 0 }}>{d}</div>
+                            {evs.slice(0, 2).map(e => <CheckboxEvent key={e.id} text={e.text} done={doneIds.has(e.id)} isFixed={e.type === "fixed"} color={e.color} isNew={e.isNew} onToggle={() => toggleDone(e.id)} compact />)}
+                            {evs.length > 2 && <div style={{ fontSize: "9px", fontWeight: 700, color: "var(--muted)", paddingLeft: "4px" }}>+{evs.length - 2}</div>}
+                        </div>
+                    );
+                })}
+                {nextDays.map(d => (
+                    <div key={`n${d}`} style={{ borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "6px", background: "#faf9fd" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted2)", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>{d}</div>
                     </div>
                 ))}
             </div>
@@ -107,101 +164,46 @@ function ProgressSection({ title, rows }: {
     );
 }
 
-// ── MONTH VIEW ──────────────────────────────────────────
-function MonthView({ onViewChange }: { onViewChange: (v: CalView) => void }) {
-    const startDow = 2; // July 2025 starts Tuesday
-    const daysInMonth = 31;
-    const daysInPrevMonth = 30;
+// ── WEEK VIEW ──────────────────────────────────────────────
+interface WeekEv { col: number; slot: number; h: number; text: string; type: string; cls: string; isNew?: boolean; id: string; }
 
-    const prevDays: number[] = [];
-    for (let i = 0; i < startDow; i++) {
-        prevDays.push(daysInPrevMonth - startDow + 1 + i);
-    }
-    const total = startDow + daysInMonth;
-    const rem = 35 - total;
-    const nextDays: number[] = Array.from({ length: rem }, (_, i) => i + 1);
+const weekEventsData: WeekEv[] = [
+    { id: "w1", col: 1, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+    { id: "w2", col: 1, slot: 2, h: 1, text: "Competitor Analysis", type: "ai", cls: "we-pink" },
+    { id: "w3", col: 2, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+    { id: "w4", col: 2, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
+    { id: "w5", col: 3, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
+    { id: "w6", col: 3, slot: 2, h: 1, text: "Team Meeting", type: "fixed", cls: "we-blue" },
+    { id: "w7", col: 4, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+    { id: "w8", col: 4, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
+    { id: "w9", col: 5, slot: 6, h: 1, text: "Review Edits", type: "ai", cls: "we-amber" },
+    { id: "w10", col: 6, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+];
 
-    return (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", gap: "12px", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
-                <div style={{ fontSize: "22px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.5px" }}>2025年7月</div>
-                <div style={{ display: "flex", gap: "4px" }}>
-                    <button style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>‹</button>
-                    <button style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>›</button>
-                </div>
-                <ViewSwitch current="month" onChange={onViewChange} />
-            </div>
-            <ProgressSection title="本月任务进度" rows={[
-                { color: "#7c6fcd", name: "斯德哥尔摩旅行", pct: 100, label: "100%" },
-                { color: "#e784b0", name: "竞品分析报告", pct: 60, label: "60%" },
-                { color: "#4bbfa8", name: "每日晨跑 30min", pct: 71, label: "15/21" },
-                { color: "#f0a653", name: "月度复盘", pct: 25, label: "25%" },
-            ]} />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
-                    {["日", "一", "二", "三", "四", "五", "六"].map(d => (
-                        <div key={d} style={{ padding: "9px 12px", textAlign: "center", fontSize: "11px", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.6px" }}>{d}</div>
-                    ))}
-                </div>
-                <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(7,1fr)", gridTemplateRows: "repeat(5,1fr)", overflow: "hidden" }}>
-                    {prevDays.map(d => (
-                        <div key={`p${d}`} style={{ borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "8px", background: "#faf9fd", display: "flex", flexDirection: "column", gap: "3px" }}>
-                            <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted2)", width: "26px", height: "26px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>{d}</div>
-                        </div>
-                    ))}
-                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
-                        const isToday = d === 15;
-                        const evs = monthEvents[d] || [];
-                        return (
-                            <div key={d} style={{ borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "8px", cursor: "pointer", background: "#fff", display: "flex", flexDirection: "column", gap: "3px", minHeight: 0 }}>
-                                <div style={{ fontSize: "13px", fontWeight: 800, color: isToday ? "#fff" : "var(--text)", width: "26px", height: "26px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: isToday ? "var(--purple)" : "transparent", boxShadow: isToday ? "0 2px 6px rgba(124,111,205,0.4)" : "none", flexShrink: 0 }}>{d}</div>
-                                {evs.slice(0, 2).map((e, i) => (
-                                    <div key={i} style={{ padding: "3px 7px", borderRadius: "6px", fontSize: "10px", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", ...chipStyle[e.cls] }}>{e.text}</div>
-                                ))}
-                                {evs.length > 2 && <div style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", padding: "2px 6px" }}>+{evs.length - 2} 更多</div>}
-                            </div>
-                        );
-                    })}
-                    {nextDays.map(d => (
-                        <div key={`n${d}`} style={{ borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "8px", background: "#faf9fd", display: "flex", flexDirection: "column", gap: "3px" }}>
-                            <div style={{ fontSize: "13px", fontWeight: 800, color: "var(--muted2)", width: "26px", height: "26px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>{d}</div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── WEEK VIEW ──────────────────────────────────────────
-function WeekView({ onViewChange }: { onViewChange: (v: CalView) => void }) {
+function WeekView() {
+    const { events } = useApp();
+    const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
     const weekDays = [
-        { dow: "日", num: 13 }, { dow: "一", num: 14 }, { dow: "二", num: 15, today: true },
-        { dow: "三", num: 16 }, { dow: "四", num: 17 }, { dow: "五", num: 18 }, { dow: "六", num: 19 },
+        { dow: "Sun", num: 13 }, { dow: "Mon", num: 14 }, { dow: "Tue", num: 15, today: true },
+        { dow: "Wed", num: 16 }, { dow: "Thu", num: 17 }, { dow: "Fri", num: 18 }, { dow: "Sat", num: 19 },
     ];
+    const extraWeekEvs: WeekEv[] = events.filter(e => e.day >= 13 && e.day <= 19).map(e => ({ id: e.id, col: e.day - 13, slot: 0, h: 1, text: e.text, type: e.type, cls: e.color.replace("chip-", "we-"), isNew: e.isNew }));
+    const allWeekEvs = [...weekEventsData, ...extraWeekEvs];
+    const toggleDone = (id: string) => setDoneIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
     return (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", gap: "12px", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
-                <div style={{ fontSize: "22px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.5px" }}>2025年7月 第三周</div>
+            <div style={{ display: "flex", alignItems: "center", padding: "12px 20px", gap: "10px", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
+                <div style={{ fontSize: "20px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.5px" }}>July 2025 · Week 3</div>
                 <div style={{ display: "flex", gap: "4px" }}>
-                    <button style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>‹</button>
-                    <button style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>›</button>
+                    {["‹", "›"].map(a => <button key={a} style={{ width: "28px", height: "28px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>{a}</button>)}
                 </div>
-                <ViewSwitch current="week" onChange={onViewChange} />
             </div>
-            <ProgressSection title="本周任务进度" rows={[
-                { color: "#7c6fcd", name: "斯德哥尔摩旅行", pct: 100, label: "完成 ✓" },
-                { color: "#e784b0", name: "竞品分析报告", pct: 60, label: "6/10h" },
-                { color: "#4bbfa8", name: "每日晨跑", pct: 71, label: "5/7天" },
-                { color: "#f0a653", name: "月度复盘", pct: 25, label: "25%" },
-            ]} />
-            {/* Week header */}
             <div style={{ display: "grid", gridTemplateColumns: "56px repeat(7,1fr)", borderBottom: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
                 <div style={{ padding: "10px 6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>时间</span>
+                    <span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>Time</span>
                 </div>
-                {weekDays.map((d) => (
+                {weekDays.map(d => (
                     <div key={d.num} style={{ padding: "10px 6px", textAlign: "center", borderLeft: "1px solid var(--border)" }}>
                         <div style={{ fontSize: "10px", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>{d.dow}</div>
                         {d.today ? (
@@ -212,27 +214,20 @@ function WeekView({ onViewChange }: { onViewChange: (v: CalView) => void }) {
                     </div>
                 ))}
             </div>
-            {/* Week body */}
             <div style={{ flex: 1, overflowY: "auto", display: "flex" }}>
                 <div style={{ width: "56px", background: "#fff", borderRight: "1px solid var(--border)", flexShrink: 0 }}>
-                    {TIMES.map(t => (
-                        <div key={t} style={{ height: "56px", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "5px 8px 0", borderBottom: "1px solid var(--border)" }}>
-                            <span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>{t}</span>
-                        </div>
-                    ))}
+                    {TIMES.map(t => <div key={t} style={{ height: "56px", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "5px 8px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>{t}</span></div>)}
                 </div>
                 <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
                     {Array.from({ length: 7 }, (_, c) => {
                         const isToday = c === 2;
-                        const colEvents = weekEvents.filter(e => e.col === c);
+                        const colEvs = allWeekEvs.filter(e => e.col === c);
                         return (
                             <div key={c} style={{ borderLeft: "1px solid var(--border)", position: "relative", background: isToday ? "linear-gradient(180deg,#faf8ff 0%,#fff 100%)" : undefined }}>
-                                {TIMES.map((_, s) => (
-                                    <div key={s} style={{ height: "56px", borderBottom: "1px solid var(--border)" }} />
-                                ))}
-                                {colEvents.map((ev, i) => (
-                                    <div key={i} style={{ position: "absolute", left: "3px", right: "3px", top: `${ev.slot * 56 + 4}px`, height: `${ev.h * 56 - 8}px`, borderRadius: "8px", padding: "4px 8px", fontSize: "10px", fontWeight: 800, cursor: "pointer", overflow: "hidden", zIndex: 2, borderLeft: "3px solid transparent", ...weStyle[ev.cls] }}>
-                                        {ev.text}
+                                {TIMES.map((_, s) => <div key={s} style={{ height: "56px", borderBottom: "1px solid var(--border)" }} />)}
+                                {colEvs.map(ev => (
+                                    <div key={ev.id} style={{ position: "absolute", left: "3px", right: "3px", top: `${ev.slot * 56 + 4}px`, height: `${ev.h * 56 - 8}px`, zIndex: 2, animation: ev.isNew ? "fadeSlideIn .4s ease" : undefined }}>
+                                        <CheckboxEvent text={ev.text} done={doneIds.has(ev.id)} isFixed={ev.type === "fixed"} color={ev.cls} isNew={ev.isNew} onToggle={() => toggleDone(ev.id)} />
                                     </div>
                                 ))}
                             </div>
@@ -244,147 +239,75 @@ function WeekView({ onViewChange }: { onViewChange: (v: CalView) => void }) {
     );
 }
 
-// ── DAY VIEW ──────────────────────────────────────────
-function DayView({ onViewChange }: { onViewChange: (v: CalView) => void }) {
-    const [tasks, setTasks] = useState([
-        { id: "run", name: "晨跑 30min", meta: "7:00 · 运动 · 已完成", done: true, pct: 100, color: "var(--teal)" },
-        { id: "analysis", name: "竞品分析报告", meta: "10:00 - 12:00 · 工作", done: false, pct: 50, color: "var(--pink)" },
-        { id: "data", name: "数据分析阶段", meta: "13:00 - 15:00 · 工作", done: false, pct: 0, color: "var(--amber)" },
+// ── DAY VIEW ──────────────────────────────────────────────
+interface DayTask { id: string; text: string; time: string; type: "fixed" | "ai"; cls: string; done: boolean; slot: number; }
+
+function DayView() {
+    const { events } = useApp();
+    const [tasks, setTasks] = useState<DayTask[]>([
+        { id: "run", text: "Morning Run 30min", time: "7:00 - 7:30", type: "ai", cls: "we-teal", done: false, slot: 0 },
+        { id: "travel", text: "Stockholm Trip", time: "All day · Day 1/3", type: "ai", cls: "we-purple", done: false, slot: 1 },
+        { id: "meeting", text: "Team Meeting", time: "9:00 - 10:00", type: "fixed", cls: "we-blue", done: false, slot: 2 },
+        { id: "analysis", text: "Competitor Analysis · Research", time: "10:00 - 12:00", type: "ai", cls: "we-pink", done: false, slot: 3 },
+        { id: "data", text: "Data Analysis Phase", time: "13:00 - 15:00", type: "ai", cls: "we-amber", done: false, slot: 6 },
     ]);
 
-    const toggleTask = (id: string) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
-    };
+    const newDayTasks: DayTask[] = events.filter(e => e.day === 15).map((e, i) => ({ id: e.id, text: e.text, time: "07:00 - 07:30", type: e.type, cls: e.color.replace("chip-", "we-"), done: false, slot: 11 + i }));
+    const allTasks = [...tasks, ...newDayTasks];
+    const aiTasks = allTasks.filter(t => t.type === "ai");
+    const aiDone = aiTasks.filter(t => t.done).length;
+    const aiPct = aiTasks.length > 0 ? Math.round((aiDone / aiTasks.length) * 100) : 0;
+    const toggleTask = (id: string) => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
 
     return (
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "#fff", display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-                    <div style={{ display: "flex", gap: "4px" }}>
-                        <button style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>‹</button>
-                        <button style={{ width: "30px", height: "30px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>›</button>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: "20px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.4px" }}>周二，2025年7月15日</div>
-                        <div style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600, marginTop: "2px" }}>今天 · 3 个事件 · 3 个任务</div>
-                    </div>
-                    <div style={{ marginLeft: "auto", background: "var(--purple)", color: "#fff", fontSize: "11px", fontWeight: 800, padding: "4px 12px", borderRadius: "12px" }}>今天</div>
-                    <ViewSwitch current="day" onChange={onViewChange} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: "#fff", display: "flex", alignItems: "center", gap: "14px", flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: "4px" }}>
+                    {["‹", "›"].map(a => <button key={a} style={{ width: "28px", height: "28px", borderRadius: "8px", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "13px", fontWeight: 700 }}>{a}</button>)}
                 </div>
-                <ProgressSection title="今日任务进度" rows={[
-                    { color: "#4bbfa8", name: "晨跑 30min", pct: 100, label: "✓ 完成" },
-                    { color: "#e784b0", name: "竞品分析 2h", pct: 50, label: "1/2h" },
-                    { color: "#f0a653", name: "数据分析阶段", pct: 0, label: "待开始" },
-                ]} />
-                <div style={{ flex: 1, overflowY: "auto", display: "flex" }}>
-                    <div style={{ width: "64px", background: "#fff", borderRight: "1px solid var(--border)", flexShrink: 0 }}>
-                        {TIMES.map(t => (
-                            <div key={t} style={{ height: "72px", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "6px 10px 0", borderBottom: "1px solid var(--border)" }}>
-                                <span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>{t}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div style={{ flex: 1, background: "#fff", position: "relative" }}>
-                        {TIMES.map((_, s) => {
-                            const ev = daySlots.find(e => e.slot === s);
-                            const barColor = ev?.cls === "we-teal" ? "#4bbfa8" : ev?.cls === "we-purple" ? "#7c6fcd" : ev?.cls === "we-pink" ? "#e784b0" : "#f0a653";
-                            return (
-                                <div key={s} style={{ height: "72px", borderBottom: "1px solid var(--border)", padding: "4px 6px", position: "relative" }}>
-                                    {ev && (
-                                        <div style={{ borderRadius: "12px", padding: "10px 14px", cursor: "pointer", borderLeft: "3px solid transparent", display: "flex", alignItems: "center", gap: "10px", height: "64px", ...weStyle[ev.cls] }}>
-                                            <span style={{ fontSize: "18px", flexShrink: 0 }}>{ev.icon}</span>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontSize: "13px", fontWeight: 800 }}>{ev.text}</div>
-                                                <div style={{ fontSize: "11px", fontWeight: 600, opacity: 0.75, marginTop: "1px" }}>{ev.time}</div>
-                                            </div>
-                                            {ev.pct > 0 ? (
-                                                <div style={{ width: "60px", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "3px", flexShrink: 0 }}>
-                                                    <div style={{ fontSize: "11px", fontWeight: 800, color: barColor }}>{ev.pct}%</div>
-                                                    <div style={{ width: "100%", height: "5px", background: "rgba(0,0,0,0.08)", borderRadius: "10px", overflow: "hidden" }}>
-                                                        <div style={{ height: "100%", borderRadius: "10px", background: barColor, width: `${ev.pct}%` }} />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 700 }}>待开始</div>
-                                            )}
-                                            {ev.done && <span style={{ fontSize: "14px" }}>✅</span>}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                <div>
+                    <div style={{ fontSize: "18px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-0.4px" }}>Tuesday, July 15, 2025</div>
+                    <div style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600, marginTop: "1px" }}>Today · {aiTasks.length} AI tasks</div>
+                </div>
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)" }}>AI Task Progress</div>
+                    <svg width="48" height="48" viewBox="0 0 48 48">
+                        <circle cx="24" cy="24" r="19" fill="none" stroke="var(--bg)" strokeWidth="5" />
+                        <circle cx="24" cy="24" r="19" fill="none" stroke="var(--purple)" strokeWidth="5" strokeDasharray={`${(aiPct / 100) * 119.4} 119.4`} strokeLinecap="round" transform="rotate(-90 24 24)" style={{ transition: "stroke-dasharray .6s ease" }} />
+                        <text x="24" y="28" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--purple-deep)" fontFamily="Nunito,sans-serif">{aiPct}%</text>
+                    </svg>
                 </div>
             </div>
-            {/* Day sidebar */}
-            <div style={{ width: "250px", borderLeft: "1px solid var(--border)", background: "#fff", overflowY: "auto", padding: "16px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div style={{ borderRadius: "14px", padding: "14px", background: "#ede9fb", border: "1px solid #d4c8f5" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.6px", color: "var(--purple)", marginBottom: "7px" }}>今日完成率</div>
-                    <div style={{ fontSize: "28px", fontWeight: 900, color: "var(--purple-deep)", letterSpacing: "-1px" }}>67%</div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--purple)", marginTop: "1px" }}>2/3 任务进行中</div>
-                    <div style={{ marginTop: "10px", height: "7px", borderRadius: "20px", overflow: "hidden", background: "rgba(124,111,205,0.15)" }}>
-                        <div style={{ height: "100%", borderRadius: "20px", background: "var(--purple)", width: "67%", transition: "width .8s ease" }} />
-                    </div>
+            <div style={{ flex: 1, overflowY: "auto", display: "flex" }}>
+                <div style={{ width: "64px", background: "#fff", borderRight: "1px solid var(--border)", flexShrink: 0 }}>
+                    {TIMES.map(t => <div key={t} style={{ height: "72px", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: "6px 10px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 700 }}>{t}</span></div>)}
                 </div>
-                <div style={{ borderRadius: "14px", padding: "14px", background: "#e0f7f3", border: "1px solid #9fe1cb" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.6px", color: "#0a5e49", marginBottom: "7px" }}>今日专注时长</div>
-                    <div style={{ fontSize: "28px", fontWeight: 900, color: "#074033", letterSpacing: "-1px" }}>1.5h</div>
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: "#1d9e75", marginTop: "1px" }}>目标 4h · 37%</div>
-                    <div style={{ marginTop: "10px", height: "7px", borderRadius: "20px", overflow: "hidden", background: "rgba(75,191,168,0.2)" }}>
-                        <div style={{ height: "100%", borderRadius: "20px", background: "var(--teal)", width: "37%", transition: "width .8s ease" }} />
-                    </div>
+                <div style={{ flex: 1, background: "#fff" }}>
+                    {TIMES.map((_, s) => {
+                        const ev = allTasks.find(t => t.slot === s);
+                        return (
+                            <div key={s} style={{ height: "72px", borderBottom: "1px solid var(--border)", padding: "6px 10px" }}>
+                                {ev && (
+                                    <div style={{ height: "60px", display: "flex", alignItems: "stretch" }}>
+                                        <CheckboxEvent text={`${ev.text}  ·  ${ev.time}`} done={ev.done} isFixed={ev.type === "fixed"} color={ev.cls} isNew={ev.id.startsWith("new")} onToggle={() => toggleTask(ev.id)} />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
-                <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--text)" }}>今日任务清单</div>
-                {tasks.map(task => (
-                    <div key={task.id} style={{ background: "var(--bg)", borderRadius: "12px", padding: "12px", border: "1.5px solid var(--border)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                            <div
-                                onClick={() => toggleTask(task.id)}
-                                style={{ width: "19px", height: "19px", borderRadius: "6px", border: task.done ? "none" : "2px solid var(--border2)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: task.done ? "var(--green)" : "transparent", color: task.done ? "#fff" : "transparent", fontSize: "11px", fontWeight: 800 }}
-                            >
-                                {task.done ? "✓" : ""}
-                            </div>
-                            <div>
-                                <div style={{ fontSize: "13px", fontWeight: 800, color: task.done ? "var(--muted)" : "var(--text)", textDecoration: task.done ? "line-through" : "none" }}>{task.name}</div>
-                                <div style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600 }}>{task.meta}</div>
-                            </div>
-                        </div>
-                        <div style={{ height: "5px", background: "var(--border)", borderRadius: "10px", overflow: "hidden" }}>
-                            <div style={{ height: "100%", borderRadius: "10px", background: task.color, width: `${task.pct}%`, transition: "width .6s ease" }} />
-                        </div>
-                    </div>
-                ))}
             </div>
         </div>
     );
 }
 
-// ── VIEW SWITCH ──────────────────────────────────────────
-function ViewSwitch({ current, onChange }: { current: CalView; onChange: (v: CalView) => void }) {
-    return (
-        <div style={{ display: "flex", gap: "2px", background: "var(--bg)", borderRadius: "10px", padding: "3px", marginLeft: "auto" }}>
-            {(["月", "周", "日"] as const).map((label, i) => {
-                const views: CalView[] = ["month", "week", "day"];
-                const v = views[i];
-                return (
-                    <button key={v} onClick={() => onChange(v)} style={{ padding: "5px 16px", borderRadius: "8px", border: "none", background: current === v ? "#fff" : "transparent", fontSize: "12px", fontWeight: 800, color: current === v ? "var(--purple)" : "var(--muted)", cursor: "pointer", fontFamily: "Nunito, sans-serif", boxShadow: current === v ? "0 1px 6px rgba(124,111,205,0.18)" : "none", transition: "all .18s" }}>
-                        {label}
-                    </button>
-                );
-            })}
-        </div>
-    );
-}
-
-// ── MAIN EXPORT ──────────────────────────────────────────
 export default function CalendarView() {
-    const [calView, setCalView] = useState<CalView>("month");
-
+    const { calView } = useApp();
     return (
         <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
-            {calView === "month" && <MonthView onViewChange={setCalView} />}
-            {calView === "week" && <WeekView onViewChange={setCalView} />}
-            {calView === "day" && <DayView onViewChange={setCalView} />}
+            {calView === "month" && <MonthView />}
+            {calView === "week" && <WeekView />}
+            {calView === "day" && <DayView />}
         </div>
     );
 }
