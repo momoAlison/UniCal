@@ -1,6 +1,13 @@
 "use client";
 
-const barData = [
+import { useState } from "react";
+
+interface BarItem { val: string; h: number; color: string; lbl: string; }
+interface CatRow { name: string; pct: number; color: string; val: string; }
+interface DonutItem { color: string; name: string; pct: string; }
+interface KpiItem { lbl: string; val: string; chg: string; up?: boolean; neutral?: boolean; }
+
+const INITIAL_BAR_DATA: BarItem[] = [
     { val: "1.5h", h: 30, color: "#d9d2f5", lbl: "Sun" },
     { val: "3.0h", h: 60, color: "#7c6fcd", lbl: "Mon" },
     { val: "2.5h", h: 50, color: "#9d93d8", lbl: "Tue" },
@@ -10,7 +17,7 @@ const barData = [
     { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "Sat" },
 ];
 
-const catRows = [
+const INITIAL_CAT_ROWS: CatRow[] = [
     { name: "Competitor Analysis", pct: 60, color: "#e784b0", val: "6 / 10h" },
     { name: "Daily Morning Run", pct: 71, color: "#4bbfa8", val: "15 / 21 days" },
     { name: "Stockholm Trip", pct: 100, color: "#7c6fcd", val: "3 / 3 days ✓" },
@@ -18,7 +25,7 @@ const catRows = [
     { name: "Python Learning Plan", pct: 42, color: "#5ba4e5", val: "4.2 / 10h" },
 ];
 
-const donutLegend = [
+const INITIAL_DONUT_LEGEND: DonutItem[] = [
     { color: "#7c6fcd", name: "Work", pct: "40%" },
     { color: "#4bbfa8", name: "Fitness", pct: "24%" },
     { color: "#e784b0", name: "Travel", pct: "16%" },
@@ -26,7 +33,7 @@ const donutLegend = [
     { color: "#d9d2f5", name: "Other", pct: "9%" },
 ];
 
-const kpis = [
+const INITIAL_KPIS: KpiItem[] = [
     { lbl: "Focus Time This Week", val: "14.5h", chg: "↑ 18% vs last week", up: true },
     { lbl: "Tasks Completed", val: "23", chg: "↑ 4 vs last week", up: true },
     { lbl: "Completion Rate", val: "86%", chg: "↑ 12pp", up: true },
@@ -41,6 +48,11 @@ function getHeatmapColor(w: number, d: number): string {
 }
 
 export default function StatsView() {
+    const [kpis] = useState<KpiItem[]>(INITIAL_KPIS);
+    const [barData] = useState<BarItem[]>(INITIAL_BAR_DATA);
+    const [catRows] = useState<CatRow[]>(INITIAL_CAT_ROWS);
+    const [donutLegend] = useState<DonutItem[]>(INITIAL_DONUT_LEGEND);
+
     return (
         <div style={{ flex: 1, overflowY: "auto", padding: "24px", background: "var(--bg)" }}>
             {/* KPI Row */}

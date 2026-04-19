@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useApp, CalEvent } from "@/lib/store";
 
-// ── STATIC SEED DATA ──────────────────────────────────────────────
-const SEED_EVENTS: CalEvent[] = [
+// ── INITIAL MOCK DATA ──────────────────────────────────────────────
+// Extracted as a constant so it can be loaded into useState
+const INITIAL_SEED_EVENTS: CalEvent[] = [
     // Fixed events
     { id: "f1", day: 3, text: "Project Review", color: "chip-blue", type: "fixed" },
     { id: "f2", day: 9, text: "Team Meeting", color: "chip-blue", type: "fixed" },
@@ -22,6 +23,27 @@ const SEED_EVENTS: CalEvent[] = [
     { id: "a10", day: 16, text: "Competitor Analysis", color: "chip-pink", type: "ai" },
     { id: "a11", day: 21, text: "Morning Run", color: "chip-teal", type: "ai" },
     { id: "a12", day: 28, text: "Monthly Review", color: "chip-amber", type: "ai" },
+];
+
+const INITIAL_WEEK_EVENTS: WeekEv[] = [
+    { id: "w1", col: 1, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+    { id: "w2", col: 1, slot: 2, h: 1, text: "Competitor Analysis", type: "ai", cls: "we-pink" },
+    { id: "w3", col: 2, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+    { id: "w4", col: 2, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
+    { id: "w5", col: 3, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
+    { id: "w6", col: 3, slot: 2, h: 1, text: "Team Meeting", type: "fixed", cls: "we-blue" },
+    { id: "w7", col: 4, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+    { id: "w8", col: 4, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
+    { id: "w9", col: 5, slot: 6, h: 1, text: "Review Edits", type: "ai", cls: "we-amber" },
+    { id: "w10", col: 6, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
+];
+
+const INITIAL_DAY_TASKS: DayTask[] = [
+    { id: "run", text: "Morning Run 30min", time: "7:00 - 7:30", type: "ai", cls: "we-teal", done: false, slot: 0 },
+    { id: "travel", text: "Stockholm Trip", time: "All day · Day 1/3", type: "ai", cls: "we-purple", done: false, slot: 1 },
+    { id: "meeting", text: "Team Meeting", time: "9:00 - 10:00", type: "fixed", cls: "we-blue", done: false, slot: 2 },
+    { id: "analysis", text: "Competitor Analysis · Research", time: "10:00 - 12:00", type: "ai", cls: "we-pink", done: false, slot: 3 },
+    { id: "data", text: "Data Analysis Phase", time: "13:00 - 15:00", type: "ai", cls: "we-amber", done: false, slot: 6 },
 ];
 
 const chipStyle: Record<string, React.CSSProperties> = {
@@ -108,8 +130,9 @@ function CheckboxEvent({ text, done, isFixed, isNew, color, onToggle, compact }:
 // ── MONTH VIEW ──────────────────────────────────────────────
 function MonthView() {
     const { events } = useApp();
+    const [seedEvents] = useState<CalEvent[]>(INITIAL_SEED_EVENTS);
     const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
-    const allEvents = [...SEED_EVENTS, ...events];
+    const allEvents = [...seedEvents, ...events];
 
     const toggleDone = (id: string) => setDoneIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -167,21 +190,9 @@ function MonthView() {
 // ── WEEK VIEW ──────────────────────────────────────────────
 interface WeekEv { col: number; slot: number; h: number; text: string; type: string; cls: string; isNew?: boolean; id: string; }
 
-const weekEventsData: WeekEv[] = [
-    { id: "w1", col: 1, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
-    { id: "w2", col: 1, slot: 2, h: 1, text: "Competitor Analysis", type: "ai", cls: "we-pink" },
-    { id: "w3", col: 2, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
-    { id: "w4", col: 2, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
-    { id: "w5", col: 3, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
-    { id: "w6", col: 3, slot: 2, h: 1, text: "Team Meeting", type: "fixed", cls: "we-blue" },
-    { id: "w7", col: 4, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
-    { id: "w8", col: 4, slot: 1, h: 2, text: "Stockholm Trip", type: "ai", cls: "we-purple" },
-    { id: "w9", col: 5, slot: 6, h: 1, text: "Review Edits", type: "ai", cls: "we-amber" },
-    { id: "w10", col: 6, slot: 0, h: 1, text: "Morning Run", type: "ai", cls: "we-teal" },
-];
-
 function WeekView() {
     const { events } = useApp();
+    const [weekEventsData] = useState<WeekEv[]>(INITIAL_WEEK_EVENTS);
     const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
     const weekDays = [
         { dow: "Sun", num: 13 }, { dow: "Mon", num: 14 }, { dow: "Tue", num: 15, today: true },
@@ -244,13 +255,7 @@ interface DayTask { id: string; text: string; time: string; type: "fixed" | "ai"
 
 function DayView() {
     const { events } = useApp();
-    const [tasks, setTasks] = useState<DayTask[]>([
-        { id: "run", text: "Morning Run 30min", time: "7:00 - 7:30", type: "ai", cls: "we-teal", done: false, slot: 0 },
-        { id: "travel", text: "Stockholm Trip", time: "All day · Day 1/3", type: "ai", cls: "we-purple", done: false, slot: 1 },
-        { id: "meeting", text: "Team Meeting", time: "9:00 - 10:00", type: "fixed", cls: "we-blue", done: false, slot: 2 },
-        { id: "analysis", text: "Competitor Analysis · Research", time: "10:00 - 12:00", type: "ai", cls: "we-pink", done: false, slot: 3 },
-        { id: "data", text: "Data Analysis Phase", time: "13:00 - 15:00", type: "ai", cls: "we-amber", done: false, slot: 6 },
-    ]);
+    const [tasks, setTasks] = useState<DayTask[]>(INITIAL_DAY_TASKS);
 
     const newDayTasks: DayTask[] = events.filter(e => e.day === 15).map((e, i) => ({ id: e.id, text: e.text, time: "07:00 - 07:30", type: e.type, cls: e.color.replace("chip-", "we-"), done: false, slot: 11 + i }));
     const allTasks = [...tasks, ...newDayTasks];

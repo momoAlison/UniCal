@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useApp } from "@/lib/store";
 
 export default function Header() {
     const { currentPage, calView, setCalView } = useApp();
+    const [streakDays] = useState(7);
 
     return (
         <header
@@ -60,7 +62,7 @@ export default function Header() {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "linear-gradient(135deg,#ffe8e8,#fff0f0)", color: "var(--streak)", borderRadius: "20px", padding: "5px 12px", fontSize: "12px", fontWeight: 800, border: "1px solid #ffc9c9" }}>
                     <span className="streak-flame">🔥</span>
-                    7-day streak
+                    {streakDays}-day streak
                 </div>
                 <button style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1.5px solid var(--border)", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", position: "relative" }}>
                     🔔

@@ -18,7 +18,7 @@ interface Goal {
     tasks: { id: string; text: string; done: boolean; time: string }[];
 }
 
-const GOALS: Goal[] = [
+const INITIAL_GOALS: Goal[] = [
     {
         id: "python",
         icon: "🐍",
@@ -173,8 +173,9 @@ function GoalCard({ goal }: { goal: Goal }) {
 }
 
 export default function GoalsView() {
-    const totalGoals = GOALS.length;
-    const avgPct = Math.round(GOALS.reduce((s, g) => s + (g.doneHours / g.totalHours) * 100, 0) / totalGoals);
+    const [goals] = useState<Goal[]>(INITIAL_GOALS);
+    const totalGoals = goals.length;
+    const avgPct = Math.round(goals.reduce((s: number, g: Goal) => s + (g.doneHours / g.totalHours) * 100, 0) / totalGoals);
 
     return (
         <div style={{ flex: 1, overflowY: "auto", padding: "24px", background: "var(--bg)", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -191,7 +192,7 @@ export default function GoalsView() {
                     </div>
                 ))}
             </div>
-            {GOALS.map(g => <GoalCard key={g.id} goal={g} />)}
+            {goals.map((g: Goal) => <GoalCard key={g.id} goal={g} />)}
         </div>
     );
 }
