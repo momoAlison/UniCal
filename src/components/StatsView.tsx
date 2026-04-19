@@ -1,44 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useApp } from "@/lib/store";
 
 interface BarItem { val: string; h: number; color: string; lbl: string; }
-interface CatRow { name: string; pct: number; color: string; val: string; }
 interface DonutItem { color: string; name: string; pct: string; }
-interface KpiItem { lbl: string; val: string; chg: string; up?: boolean; neutral?: boolean; }
-
-const INITIAL_BAR_DATA: BarItem[] = [
-    { val: "1.5h", h: 30, color: "#d9d2f5", lbl: "Sun" },
-    { val: "3.0h", h: 60, color: "#7c6fcd", lbl: "Mon" },
-    { val: "2.5h", h: 50, color: "#9d93d8", lbl: "Tue" },
-    { val: "2.0h", h: 40, color: "#7c6fcd", lbl: "Wed" },
-    { val: "3.5h", h: 70, color: "#5347a8", lbl: "Thu" },
-    { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "Fri" },
-    { val: "1.0h", h: 20, color: "#d9d2f5", lbl: "Sat" },
-];
-
-const INITIAL_CAT_ROWS: CatRow[] = [
-    { name: "Competitor Analysis", pct: 60, color: "#e784b0", val: "6 / 10h" },
-    { name: "Daily Morning Run", pct: 71, color: "#4bbfa8", val: "15 / 21 days" },
-    { name: "Stockholm Trip", pct: 100, color: "#7c6fcd", val: "3 / 3 days ✓" },
-    { name: "Monthly Retrospective", pct: 25, color: "#f0a653", val: "1 / 4h" },
-    { name: "Python Learning Plan", pct: 42, color: "#5ba4e5", val: "4.2 / 10h" },
-];
-
-const INITIAL_DONUT_LEGEND: DonutItem[] = [
-    { color: "#7c6fcd", name: "Work", pct: "40%" },
-    { color: "#4bbfa8", name: "Fitness", pct: "24%" },
-    { color: "#e784b0", name: "Travel", pct: "16%" },
-    { color: "#f0a653", name: "Learning", pct: "11%" },
-    { color: "#d9d2f5", name: "Other", pct: "9%" },
-];
-
-const INITIAL_KPIS: KpiItem[] = [
-    { lbl: "Focus Time This Week", val: "14.5h", chg: "↑ 18% vs last week", up: true },
-    { lbl: "Tasks Completed", val: "23", chg: "↑ 4 vs last week", up: true },
-    { lbl: "Completion Rate", val: "86%", chg: "↑ 12pp", up: true },
-    { lbl: "Current Streak", val: "7 days", chg: "Best: 14 days", neutral: true },
-];
 
 function getHeatmapColor(w: number, d: number): string {
     const colors = ["#f0eef8", "#d9d2f5", "#b09fe8", "#7c6fcd", "#5347a8"];
@@ -47,17 +12,87 @@ function getHeatmapColor(w: number, d: number): string {
     return colors[idx];
 }
 
+const CATEGORY_COLOR: Record<string, string> = {
+    Fitness: "#4bbfa8",
+    Work: "#e784b0",
+    Learning: "#5ba4e5",
+    Travel: "#7c6fcd",
+    Other: "#f0a653",
+};
+
 export default function StatsView() {
-    const [kpis] = useState<KpiItem[]>(INITIAL_KPIS);
-    const [barData] = useState<BarItem[]>(INITIAL_BAR_DATA);
-    const [catRows] = useState<CatRow[]>(INITIAL_CAT_ROWS);
-    const [donutLegend] = useState<DonutItem[]>(INITIAL_DONUT_LEGEND);
+    const { events, goals } = useApp();
+
+    // ── Derive KPIs from live data ──────────────────────────────────────────
+    const confirmedEvents = events.filter(e => e.status === "confirmed" || e.status === undefined);
+    const aiEvents = confirmedEvents.filter(e => e.type === "ai");
+    const totalTasks = aiEvents.length;
+
+    // Tasks completed = goal tasks marked done
+    const allGoalTasks = goals.flatMap(g => g.tasks);
+    const doneTasks = allGoalTasks.filter(t => t.done).length;
+    const completionRate = allGoalTasks.length > 0
+        ? Math.round((doneTasks / allGoalTasks.length) * 100)
+        : 86; // fallback seed
+
+    // Focus time: estimate 0.5h per AI event
+    const focusHours = (totalTasks * 0.5 + 14.5).toFixed(1);
+
+    // ── Bar chart: daily AI events this week ───────────────────────────────
+    const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const now = new Date();
+    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - now.getUTCDay()));
+
+    const barData: BarItem[] = DOW.map((lbl, i) => {
+        const day = new Date(weekStart);
+        day.setUTCDate(weekStart.getUTCDate() + i);
+        const count = aiEvents.filter(e => {
+            const d = new Date(e.isoDate);
+            return d.getUTCFullYear() === day.getUTCFullYear() &&
+                d.getUTCMonth() === day.getUTCMonth() &&
+                d.getUTCDate() === day.getUTCDate();
+        }).length;
+        // Seed baseline + live count
+        const seedH = [30, 60, 50, 40, 70, 20, 20][i];
+        const h = Math.min(100, seedH + count * 10);
+        const val = (seedH / 20 * 0.5 + count * 0.5).toFixed(1) + "h";
+        return { val, h, color: i === now.getUTCDay() ? "#5347a8" : "#7c6fcd", lbl };
+    });
+
+    // ── Donut: category breakdown from AI goals ────────────────────────────
+    const catCounts: Record<string, number> = { Work: 0, Fitness: 0, Learning: 0, Travel: 0, Other: 0 };
+    for (const g of goals) catCounts[g.category] = (catCounts[g.category] ?? 0) + g.tasks.length;
+    // Add seed baseline
+    catCounts.Work += 10; catCounts.Fitness += 6; catCounts.Learning += 4; catCounts.Travel += 4; catCounts.Other += 2;
+    const catTotal = Object.values(catCounts).reduce((a, b) => a + b, 0);
+    const donutLegend: DonutItem[] = Object.entries(catCounts)
+        .filter(([, v]) => v > 0)
+        .map(([name, v]) => ({ color: CATEGORY_COLOR[name] ?? "#ccc", name, pct: `${Math.round((v / catTotal) * 100)}%` }));
+
+    // ── Goal progress rows ─────────────────────────────────────────────────
+    const seedRows = [
+        { name: "Competitor Analysis", pct: 60, color: "#e784b0", val: "6 / 10h" },
+        { name: "Daily Morning Run", pct: 71, color: "#4bbfa8", val: "15 / 21 days" },
+        { name: "Monthly Retrospective", pct: 25, color: "#f0a653", val: "1 / 4h" },
+        { name: "Python Learning Plan", pct: 42, color: "#5ba4e5", val: "4.2 / 10h" },
+    ];
+    const aiRows = goals.map(g => {
+        const done = g.tasks.filter(t => t.done).length;
+        const pct = g.tasks.length > 0 ? Math.round((done / g.tasks.length) * 100) : 0;
+        return { name: g.name, pct, color: g.color, val: `${done} / ${g.tasks.length} sessions` };
+    });
+    const catRows = [...aiRows, ...seedRows];
 
     return (
         <div style={{ flex: 1, overflowY: "auto", padding: "24px", background: "var(--bg)" }}>
             {/* KPI Row */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px", marginBottom: "22px" }}>
-                {kpis.map(k => (
+                {[
+                    { lbl: "Focus Time This Week", val: `${focusHours}h`, chg: "↑ 18% vs last week", up: true },
+                    { lbl: "Tasks Completed", val: `${doneTasks + 23}`, chg: `↑ ${doneTasks} AI tasks`, up: true },
+                    { lbl: "Completion Rate", val: `${completionRate}%`, chg: "↑ 12pp", up: true },
+                    { lbl: "Current Streak", val: "7 days", chg: "Best: 14 days", neutral: true },
+                ].map(k => (
                     <div key={k.lbl} style={{ background: "#fff", borderRadius: "16px", padding: "16px 18px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)" }}>
                         <div style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: "6px" }}>{k.lbl}</div>
                         <div style={{ fontSize: "28px", fontWeight: 900, color: "var(--text)", letterSpacing: "-1px" }}>{k.val}</div>
@@ -92,7 +127,7 @@ export default function StatsView() {
                             <circle cx="50" cy="50" r="38" fill="none" stroke="#4bbfa8" strokeWidth="16" strokeDasharray="57.3 181.4" strokeDashoffset="-95.5" transform="rotate(-90 50 50)" />
                             <circle cx="50" cy="50" r="38" fill="none" stroke="#e784b0" strokeWidth="16" strokeDasharray="38.2 200.5" strokeDashoffset="-152.8" transform="rotate(-90 50 50)" />
                             <circle cx="50" cy="50" r="38" fill="none" stroke="#f0a653" strokeWidth="16" strokeDasharray="26.4 212.3" strokeDashoffset="-191" transform="rotate(-90 50 50)" />
-                            <text x="50" y="55" textAnchor="middle" fontSize="14" fontWeight="800" fill="#2d2456" fontFamily="Nunito,sans-serif">23</text>
+                            <text x="50" y="55" textAnchor="middle" fontSize="14" fontWeight="800" fill="#2d2456" fontFamily="Nunito,sans-serif">{doneTasks + 23}</text>
                         </svg>
                         <div style={{ display: "flex", flexDirection: "column", gap: "9px", flex: 1 }}>
                             {donutLegend.map(l => (
@@ -112,11 +147,11 @@ export default function StatsView() {
                 <div style={{ fontSize: "13px", fontWeight: 900, color: "var(--text)", marginBottom: "18px", letterSpacing: "-0.2px" }}>Goal Progress</div>
                 {catRows.map(r => (
                     <div key={r.name} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "11px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", minWidth: "140px" }}>{r.name}</div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", minWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
                         <div style={{ flex: 1, height: "10px", background: "var(--bg)", borderRadius: "20px", overflow: "hidden", border: "1px solid var(--border)" }}>
                             <div style={{ height: "100%", borderRadius: "20px", background: r.color, width: `${r.pct}%`, transition: "width .8s cubic-bezier(.4,0,.2,1)" }} />
                         </div>
-                        <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--muted)", minWidth: "80px", textAlign: "right" }}>{r.val}</div>
+                        <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--muted)", minWidth: "100px", textAlign: "right" }}>{r.val}</div>
                     </div>
                 ))}
             </div>
@@ -166,7 +201,7 @@ export default function StatsView() {
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--muted)", fontWeight: 700, marginTop: "4px" }}>
                     <span>Avg 8.2h/wk</span><span>Avg 10.5h/wk</span><span>Avg 12.8h/wk</span>
-                    <span style={{ color: "var(--purple-deep)", fontWeight: 900 }}>This week 14.5h ↑</span>
+                    <span style={{ color: "var(--purple-deep)", fontWeight: 900 }}>This week {focusHours}h ↑</span>
                 </div>
             </div>
         </div>

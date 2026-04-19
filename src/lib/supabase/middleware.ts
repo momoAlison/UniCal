@@ -39,6 +39,7 @@ export async function updateSession(request: NextRequest) {
     const isPublicRoute =
         pathname.startsWith("/login") ||
         pathname.startsWith("/api/auth") ||
+        pathname.startsWith("/api/chat") ||
         pathname.startsWith("/_next") ||
         pathname.startsWith("/favicon");
 

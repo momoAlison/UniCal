@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { AppContext, AppState, Page, CalView, CalEvent } from "@/lib/store";
+import { AppContext, AppState, Page, CalView, CalEvent, Goal } from "@/lib/store";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import CalendarView from "@/components/CalendarView";
@@ -14,6 +14,11 @@ export default function Home() {
     const [currentPage, setCurrentPage] = useState<Page>("calendar");
     const [calView, setCalView] = useState<CalView>("month");
     const [events, setEvents] = useState<CalEvent[]>([]);
+    const [goals, setGoals] = useState<Goal[]>([]);
+
+    const now = new Date();
+    const [viewYear, setViewYear] = useState(now.getFullYear());
+    const [viewMonth, setViewMonthState] = useState(now.getMonth());
 
     const addEvents = useCallback((evs: CalEvent[]) => {
         setEvents(prev => {
@@ -27,14 +32,70 @@ export default function Home() {
         setEvents(prev => prev.map(e => e.id === id ? { ...e, done: !("done" in e) } : e));
     }, []);
 
+    const setViewMonth = useCallback((year: number, month: number) => {
+        setViewYear(year);
+        setViewMonthState(month);
+    }, []);
+
+    const confirmEvents = useCallback((ids: string[]) => {
+        const idSet = new Set(ids);
+        setEvents(prev => prev.map(e => idSet.has(e.id) ? { ...e, status: "confirmed" as const, isNew: false } : e));
+    }, []);
+
+    const removeEvents = useCallback((ids: string[]) => {
+        const idSet = new Set(ids);
+        setEvents(prev => prev.filter(e => !idSet.has(e.id)));
+    }, []);
+
+    const upsertGoals = useCallback((incoming: Goal[]) => {
+        setGoals(prev => {
+            const map = new Map(prev.map(g => [g.id, g]));
+            for (const g of incoming) {
+                const existing = map.get(g.id);
+                if (existing) {
+                    // Merge: keep existing tasks, update counts
+                    map.set(g.id, {
+                        ...existing,
+                        ...g,
+                        tasks: [
+                            ...existing.tasks,
+                            ...g.tasks.filter(t => !existing.tasks.find(et => et.id === t.id)),
+                        ],
+                        totalSessions: existing.totalSessions + g.totalSessions,
+                        lastActivity: g.lastActivity ?? existing.lastActivity,
+                    });
+                } else {
+                    map.set(g.id, g);
+                }
+            }
+            return Array.from(map.values());
+        });
+    }, []);
+
+    const toggleGoalTask = useCallback((goalId: string, taskId: string) => {
+        setGoals(prev => prev.map(g =>
+            g.id === goalId
+                ? { ...g, tasks: g.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t) }
+                : g
+        ));
+    }, []);
+
     const ctx: AppState = {
         currentPage,
         calView,
         events,
+        goals,
+        viewYear,
+        viewMonth,
         setPage: setCurrentPage,
         setCalView,
         addEvents,
+        confirmEvents,
+        removeEvents,
         toggleEventDone,
+        setViewMonth,
+        upsertGoals,
+        toggleGoalTask,
     };
 
     return (
