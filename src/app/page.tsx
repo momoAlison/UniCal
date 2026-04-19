@@ -9,12 +9,15 @@ import ChatBox from "@/components/ChatBox";
 import GoalsView from "@/components/GoalsView";
 import StatsView from "@/components/StatsView";
 import TrophyView from "@/components/TrophyView";
+import UnicornConfetti from "@/components/UnicornConfetti";
 
 export default function Home() {
     const [currentPage, setCurrentPage] = useState<Page>("calendar");
     const [calView, setCalView] = useState<CalView>("month");
     const [events, setEvents] = useState<CalEvent[]>([]);
     const [goals, setGoals] = useState<Goal[]>([]);
+    const [streakDays, setStreakDays] = useState(7); // seed with 7
+    const [confettiTrigger, setConfettiTrigger] = useState(false);
 
     const now = new Date();
     const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -73,12 +76,25 @@ export default function Home() {
     }, []);
 
     const toggleGoalTask = useCallback((goalId: string, taskId: string) => {
-        setGoals(prev => prev.map(g =>
-            g.id === goalId
-                ? { ...g, tasks: g.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t) }
-                : g
-        ));
+        let wasUndone = false;
+        setGoals(prev => prev.map(g => {
+            if (g.id !== goalId) return g;
+            const tasks = g.tasks.map(t => {
+                if (t.id !== taskId) return t;
+                wasUndone = !t.done; // true = we're marking it done
+                return { ...t, done: !t.done };
+            });
+            return { ...g, tasks };
+        }));
+        // Fire confetti when marking a task as done
+        if (wasUndone) {
+            setConfettiTrigger(true);
+            setStreakDays(s => s + 1);
+        }
     }, []);
+
+    const resetConfetti = useCallback(() => setConfettiTrigger(false), []);
+    const incrementStreak = useCallback(() => setStreakDays(s => s + 1), []);
 
     const ctx: AppState = {
         currentPage,
@@ -87,6 +103,8 @@ export default function Home() {
         goals,
         viewYear,
         viewMonth,
+        streakDays,
+        confettiTrigger,
         setPage: setCurrentPage,
         setCalView,
         addEvents,
@@ -96,10 +114,15 @@ export default function Home() {
         setViewMonth,
         upsertGoals,
         toggleGoalTask,
+        resetConfetti,
+        incrementStreak,
     };
 
     return (
         <AppContext.Provider value={ctx}>
+            {/* Global unicorn confetti — fires on task completion */}
+            <UnicornConfetti trigger={confettiTrigger} onDone={resetConfetti} />
+
             <div
                 style={{
                     display: "flex",

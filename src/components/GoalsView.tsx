@@ -164,7 +164,7 @@ function GoalCard({ goal, onToggleTask }: { goal: Goal; onToggleTask: (taskId: s
 }
 
 export default function GoalsView() {
-    const { goals: aiGoals, toggleGoalTask } = useApp();
+    const { goals: aiGoals, toggleGoalTask, streakDays } = useApp();
 
     // Merge seed goals with AI-generated goals (AI goals appear first if new)
     const seedIds = new Set(SEED_GOALS.map(g => g.id));
@@ -192,7 +192,7 @@ export default function GoalsView() {
                     { lbl: "Active Goals", val: `${totalGoals}`, color: "var(--purple)" },
                     { lbl: "Avg. Completion", val: `${avgPct}%`, color: "var(--teal)" },
                     { lbl: "AI Tasks Added", val: `${aiTaskCount}`, color: "var(--pink)" },
-                    { lbl: "Current Streak", val: "7 days 🔥", color: "var(--amber)" },
+                    { lbl: "Current Streak", val: `${streakDays} days 🔥`, color: "var(--amber)" },
                 ].map(s => (
                     <div key={s.lbl} style={{ background: "#fff", borderRadius: "14px", padding: "14px 16px", border: "1.5px solid var(--border)", boxShadow: "var(--shadow)" }}>
                         <div style={{ fontSize: "10px", color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: "5px" }}>{s.lbl}</div>

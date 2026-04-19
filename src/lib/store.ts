@@ -65,6 +65,10 @@ export interface AppState {
     /** The month/year the calendar is currently showing (for navigation) */
     viewYear: number;
     viewMonth: number; // 0-indexed
+    /** Consecutive days streak */
+    streakDays: number;
+    /** Confetti trigger — flips true to fire, then resets */
+    confettiTrigger: boolean;
     /** actions */
     setPage: (p: Page) => void;
     setCalView: (v: CalView) => void;
@@ -77,8 +81,12 @@ export interface AppState {
     setViewMonth: (year: number, month: number) => void;
     /** Upsert goals (merge by id) */
     upsertGoals: (goals: Goal[]) => void;
-    /** Mark a goal task done */
+    /** Mark a goal task done — fires confetti if first completion today */
     toggleGoalTask: (goalId: string, taskId: string) => void;
+    /** Reset confetti trigger after animation */
+    resetConfetti: () => void;
+    /** Increment streak (called after task completion) */
+    incrementStreak: () => void;
 }
 
 const now = new Date();
@@ -90,6 +98,8 @@ export const AppContext = createContext<AppState>({
     goals: [],
     viewYear: now.getFullYear(),
     viewMonth: now.getMonth(),
+    streakDays: 7,
+    confettiTrigger: false,
     setPage: () => { },
     setCalView: () => { },
     addEvents: () => { },
@@ -99,6 +109,8 @@ export const AppContext = createContext<AppState>({
     setViewMonth: () => { },
     upsertGoals: () => { },
     toggleGoalTask: () => { },
+    resetConfetti: () => { },
+    incrementStreak: () => { },
 });
 
 export const useApp = () => useContext(AppContext);

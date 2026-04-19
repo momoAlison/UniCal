@@ -146,17 +146,38 @@ function PlanCard({ events }: { events: PlanEvent[] }) {
             upsertGoals(newGoals);
         }
 
-        // Log validated payload to console (Rule 5)
+        // Persist to Supabase (fire-and-forget; gracefully handles unauthenticated users)
         const payload = events.map(ev => ({
             title: ev.title,
             start_time: ev.start_time,
             end_time: ev.end_time,
             timezone: ev.timezone,
             is_ai_task: !ev.is_fixed,
-            status: "pending",
         }));
+
+        fetch("/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ events: payload }),
+        })
+            .then(async res => {
+                const json = await res.json();
+                if (!res.ok) {
+                    // 401 = not logged in — silently skip DB write
+                    if (res.status !== 401) {
+                        console.warn("[UniCal] Supabase insert failed:", json.error);
+                    }
+                } else {
+                    console.log(
+                        `%c[UniCal] ✅ ${json.inserted} event(s) saved to Supabase`,
+                        "color:#4bbfa8;font-weight:bold"
+                    );
+                }
+            })
+            .catch(err => console.warn("[UniCal] Network error saving events:", err));
+
         console.log(
-            "%c[UniCal] 一键入历 — validated event payload:",
+            "%c[UniCal] 一键入历 — event payload:",
             "color:#7c6fcd;font-weight:bold",
             JSON.stringify(payload, null, 2)
         );
